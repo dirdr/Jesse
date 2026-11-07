@@ -13,6 +13,7 @@ from typing import Literal
 
 from .application import RunManager
 from .live import cached_frame, live_state
+from .voice import VoiceListener
 
 
 class ResearchQuestion(BaseModel):
@@ -24,13 +25,15 @@ class ResearcherMessage(ResearchQuestion):
     source: Literal["text", "voice"] = "text"
 
 
-def create_app(manager: RunManager | None = None) -> FastAPI:
+def create_app(manager: RunManager | None = None, voice: VoiceListener | None = None) -> FastAPI:
     manager = manager or RunManager(Path("runs"))
+    voice = voice or VoiceListener(manager)
     token = secrets.token_urlsafe(32)
 
     @asynccontextmanager
     async def lifespan(app):
         yield
+        voice.close()
         manager.close()
 
     app = FastAPI(title="Jesse", lifespan=lifespan, docs_url=None, redoc_url=None)
@@ -124,6 +127,21 @@ def create_app(manager: RunManager | None = None) -> FastAPI:
         response = FileResponse(path, media_type="image/jpeg")
         response.headers["Cache-Control"] = "private, max-age=86400, immutable"
         return response
+
+    @app.get("/api/voice")
+    def voice_state():
+        return voice.state()
+
+    @app.post("/api/voice/start")
+    def voice_start():
+        try:
+            return voice.start()
+        except ValueError as error:
+            raise HTTPException(409, str(error)) from None
+
+    @app.post("/api/voice/stop")
+    def voice_stop():
+        return voice.stop()
 
     return app
 

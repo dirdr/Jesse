@@ -1,5 +1,14 @@
 # Live voice workflow
 
+## From the Jesse panel
+
+With `GLADIA_API_KEY` in `.env`, start `uv run --env-file .env jesse-ui` and press the microphone button.
+The controller captures the local microphone (macOS asks the terminal for microphone permission) and streams it
+to Gladia. Each completed turn starts a catalogue investigation, or, while a session accepts messages, is sent to it
+as a researcher correction (`source: "voice"`). The panel shows the partial transcript while listening.
+
+## Terminal preview
+
 This prototype streams microphone audio to Gladia, displays partial transcripts,
 and groups final utterances into researcher turns. By default it only prints
 the transcript. Only speak content you are comfortable sending to Gladia.

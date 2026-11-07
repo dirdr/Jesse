@@ -14,6 +14,7 @@ import {
 import { Tooltip, TooltipContent, TooltipTrigger } from "@/components/ui/tooltip"
 import { StatusBadge } from "@/components/status-badge"
 import { Logo } from "@/components/logo"
+import type { ReactNode } from "react"
 import type { Snapshot } from "@/lib/api"
 
 interface HeaderProps {
@@ -24,9 +25,10 @@ interface HeaderProps {
   onStop: () => void
   onNew: () => void
   onReport: () => void
+  mic: ReactNode
 }
 
-export function Header({ snapshot, hasRun, replay, reportReady, onStop, onNew, onReport }: HeaderProps) {
+export function Header({ snapshot, hasRun, replay, reportReady, onStop, onNew, onReport, mic }: HeaderProps) {
   const question = snapshot?.events.find((event) => event.author === "researcher")?.text ?? snapshot?.selection?.question
   return (
     <header className="sticky top-0 z-20 border-b border-border/60 bg-background/75 backdrop-blur-xl">
@@ -47,6 +49,7 @@ export function Header({ snapshot, hasRun, replay, reportReady, onStop, onNew, o
 
         <div className="flex items-center gap-1.5">
           <StatusBadge status={snapshot?.status ?? "idle"} />
+          {mic}
           {snapshot?.agent_view_url && (
             <Tooltip>
               <TooltipTrigger asChild>

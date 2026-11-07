@@ -8,16 +8,16 @@ import { MeasurementsPanel, PlanPanel } from "@/components/side-panels"
 import { SteerBar } from "@/components/steer-bar"
 import { OutcomeBadge, ReportSheet } from "@/components/details"
 import { useRun } from "@/lib/use-run"
-
-declare global {
-  interface Window {
-    /** Voice adapter entry (e.g. Gladia): one call per final transcript. Starts a run or steers the live one. */
-    jesseSubmit?: (text: string, source?: "text" | "voice") => Promise<boolean>
-  }
-}
+import { useVoice } from "@/lib/use-voice"
+import { TranscriptPill, VoiceButton } from "@/components/voice"
 
 export default function App() {
   const run = useRun()
+  const voice = useVoice((runId) => {
+    window.history.replaceState(null, "", window.location.pathname)
+    run.attach(runId, false)
+  })
+  const mic = <VoiceButton state={voice.state} onToggle={voice.toggle} />
   const [pinned, setPinned] = useState<number | null>(null)
   const [reportOpen, setReportOpen] = useState(false)
   const hasRun = run.runId !== null
@@ -30,13 +30,6 @@ export default function App() {
     setReportOpen(false)
   }, [run.runId])
 
-  useEffect(() => {
-    window.jesseSubmit = (text, source = "voice") => (hasRun && snapshot?.active ? run.steer(text, source) : run.start(text))
-    return () => {
-      delete window.jesseSubmit
-    }
-  }, [hasRun, snapshot?.active, run])
-
   return (
     <TooltipProvider delayDuration={300}>
       <div className="flex min-h-full flex-col">
@@ -48,11 +41,12 @@ export default function App() {
           onStop={run.stop}
           onNew={run.reset}
           onReport={() => setReportOpen(true)}
+          mic={hasRun ? mic : null}
         />
 
         {!hasRun ? (
           <main className="flex flex-1 px-4 sm:px-6">
-            <Launcher busy={run.busy} onStart={run.start} />
+            <Launcher busy={run.busy} onStart={run.start} mic={mic} />
           </main>
         ) : (
           <main className="mx-auto grid w-full max-w-[1600px] flex-1 grid-cols-1 gap-5 px-4 py-5 sm:px-6 xl:grid-cols-[minmax(0,1fr)_400px]">
@@ -88,6 +82,7 @@ export default function App() {
           </main>
         )}
       </div>
+      <TranscriptPill state={voice.state} />
       <ReportSheet open={reportOpen} onOpenChange={setReportOpen} snapshot={snapshot} report={run.report} />
       <Toaster position="top-center" richColors />
     </TooltipProvider>

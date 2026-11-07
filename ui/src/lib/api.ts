@@ -82,6 +82,23 @@ export interface LiveState {
   errors: number
 }
 
+export interface VoiceTurn {
+  id: string
+  text: string
+  action: "started" | "steered" | "failed"
+  run_id: string | null
+  detail: string | null
+}
+
+export interface VoiceState {
+  available: boolean
+  reason: string | null
+  listening: boolean
+  partial: string
+  error: string | null
+  turns: VoiceTurn[]
+}
+
 const token =
   document.querySelector<HTMLMetaElement>('meta[name="jesse-token"]')?.content ?? ""
 
@@ -118,4 +135,7 @@ export const api = {
   report: (url: string) => request<string>(url),
   live: (id: string) => request<LiveState>(`/api/runs/${id}/live`),
   frameUrl: (id: string, index: number) => `/api/runs/${id}/frames/${index}`,
+  voice: () => request<VoiceState>("/api/voice"),
+  voiceStart: () => request<VoiceState>("/api/voice/start", { method: "POST" }),
+  voiceStop: () => request<VoiceState>("/api/voice/stop", { method: "POST" }),
 }

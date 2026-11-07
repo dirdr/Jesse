@@ -1,4 +1,4 @@
-import { useState } from "react"
+import { useState, type ReactNode } from "react"
 import { motion } from "motion/react"
 import { ArrowRight, FlaskConical, Loader2, Thermometer } from "lucide-react"
 import { Button } from "@/components/ui/button"
@@ -17,7 +17,7 @@ const EXPERIMENTS = [
   },
 ]
 
-export function Launcher({ busy, onStart }: { busy: boolean; onStart: (question: string) => Promise<boolean> }) {
+export function Launcher({ busy, onStart, mic }: { busy: boolean; onStart: (question: string) => Promise<boolean>; mic: ReactNode }) {
   const [question, setQuestion] = useState("")
   const submit = () => {
     if (!busy && question.trim()) void onStart(question)
@@ -29,7 +29,7 @@ export function Launcher({ busy, onStart }: { busy: boolean; onStart: (question:
         <h1>
           <Logo size="lg" />
         </h1>
-        <p className="mt-5 text-lg text-muted-foreground">Ask a question. Watch the experiment run.</p>
+        <p className="mt-5 text-lg text-muted-foreground">Ask or speak a question. Watch the experiment run.</p>
       </motion.div>
 
       <form
@@ -51,6 +51,7 @@ export function Launcher({ busy, onStart }: { busy: boolean; onStart: (question:
           className="min-w-0 flex-1 bg-transparent px-3 py-2 text-base outline-none placeholder:text-muted-foreground"
           autoFocus
         />
+        {mic}
         <Button type="submit" size="lg" className="rounded-2xl" disabled={busy || !question.trim()}>
           {busy ? <Loader2 className="animate-spin" /> : null}
           Start experiment <ArrowRight />
