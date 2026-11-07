@@ -6,6 +6,7 @@ from pathlib import Path
 import time
 
 from jesse.contexts import ResearchContext, load_extension
+from jesse.personality import character
 from jesse.runtime import conversation_event, json_value, save_json, stop_worker
 from .lab import Lab
 from .tools import builtin_tools
@@ -21,6 +22,7 @@ def build_prompt(context: ResearchContext, surface: str, question: str) -> str:
     return "\n\n".join((
         "Researcher question (context; execute the bounded protocol): " + json.dumps(question),
         where,
+        character(),
         files("jesse").joinpath("instructions.md").read_text(encoding="utf-8"),
         context.protocol,
     ))

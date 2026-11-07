@@ -21,7 +21,9 @@ class SpeechTests(unittest.TestCase):
             translate = lambda text, question: f"[fr] {text}" if "substrat" in question else text
             first = cached_speech(folder, spoken, synthesize, translate)
             second = cached_speech(folder, spoken, synthesize, translate)
-            self.assertEqual((first, second), (folder / "speech" / f"{spoken}.mp3",) * 2)
+            self.assertEqual(first, second)
+            self.assertEqual(first.name, f"{spoken}.mp3")
+            self.assertEqual(first.parent.parent, folder / "speech")
             self.assertEqual(calls, ["[fr] trial1 recorded: 1.28."])
             self.assertIsNone(cached_speech(folder, silent, synthesize, translate))
             self.assertIsNone(cached_speech(folder, "../escape", synthesize, translate))
@@ -69,6 +71,29 @@ class StepSpeechTests(unittest.TestCase):
             calls = []
             cached_action_speech(folder, 0, lambda text: calls.append(text) or b"mp3", lambda text, question: text)
             self.assertEqual(calls, ["Loading the Coolant I assignment."])
+
+
+class ProviderTests(unittest.TestCase):
+    def test_elevenlabs_key_alone_enables_speech(self):
+        from unittest import mock
+        from jesse.conversation import speech
+
+        for name in ("ELEVENLABS_API_KEY", "IL_KEY"):
+            with mock.patch.dict("os.environ", {name: "k"}, clear=True):
+                self.assertTrue(speech.speech_available())
+        with mock.patch.dict("os.environ", {}, clear=True):
+            self.assertFalse(speech.speech_available())
+
+    def test_pinkman_persona_is_default_and_plain_is_explicit(self):
+        from unittest import mock
+        from jesse.conversation import speech
+
+        with mock.patch.dict("os.environ", {}, clear=True):
+            self.assertTrue(speech.pinkman())
+        with mock.patch.dict("os.environ", {"JESSE_PERSONA": "pinkman"}, clear=True):
+            self.assertTrue(speech.pinkman())
+        with mock.patch.dict("os.environ", {"JESSE_PERSONA": "plain"}, clear=True):
+            self.assertFalse(speech.pinkman())
 
 
 if __name__ == "__main__":

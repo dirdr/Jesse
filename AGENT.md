@@ -34,7 +34,7 @@ Operate the selected approved simulator through its browser or native desktop in
 
 Use hosted H sessions and retain agent_view_url for live viewing and replay in H Agent View. Keep one backend executor for custom tools; additional observers remain read-only. The backend must remain running while tool execution is needed.
 
-Gladia supplies voice transcription. The voice workflow groups final utterances into researcher turns. Its optional preparation mode previews PydanticAI-enriched requests; plan-only mode uses the catalogue selector. The user also authorized a separate general-browser `--run` mode: each turn is enriched and submitted to one interactive H session without catalogue selection. This is not an approved experimental protocol, does not expose validated observation or analysis tools, and its scientific output remains unverified. Browser behavior restrictions are instructions rather than an enforced access policy. It does not steer an active catalogue investigation. Spoken responses require a separate speech-output implementation. Devin and Linkup are outside the MVP.
+Gladia supplies voice transcription. The voice workflow groups final utterances into researcher turns. Its optional preparation mode previews PydanticAI-enriched requests; plan-only mode uses the catalogue selector. The user also authorized a separate general-browser `--run` mode: each turn is enriched and submitted to one interactive H session without catalogue selection. This is not an approved experimental protocol, does not expose validated observation or analysis tools, and its scientific output remains unverified. Browser behavior restrictions are instructions rather than an enforced access policy. It does not steer an active catalogue investigation. The panel implements speech output separately; the general-browser CLI does not play spoken responses. Devin and Linkup are outside the MVP.
 
 ## H harness and extension boundaries
 
@@ -58,7 +58,7 @@ Solid connections show implemented paths; dashed connections show planned capabi
 flowchart TB
     U["Researcher"]
     G["Gladia transcription"]
-    T["Speech output<br/>Provider to be chosen"]
+    T["Speech output<br/>Fish Audio, ElevenLabs or OpenAI"]
 
     subgraph LOCAL["Jesse - local Python application"]
         X["Research contexts<br/>contexts/&lt;id&gt;/"]
@@ -95,8 +95,8 @@ flowchart TB
     F -->|"History and replay"| Y
     H -->|"Expose session events"| V
     U -->|"Watch live or replay"| V
-    C -.->|"Send brief progress updates"| T
-    T -.->|"Speak updates"| U
+    C -->|"Rewrite brief updates in Jesse's voice"| T
+    T -->|"Speak updates"| U
 ```
 
 Extensibility lives in context folders. A new lab on an existing surface needs only a folder; it still needs its own interaction proof before its status changes from unverified.
@@ -125,7 +125,7 @@ Calibrate numerical limits after the interaction feasibility exercise and settle
 
 ## Personality and artifacts
 
-Conversation: a calm, concise lab colleague. Announce the next meaningful action, report material findings, and state uncertainty directly. Example: “The estimates disagree. I will check the experimental conditions before repeating the measurement.”
+Conversation: a capable, slightly cheeky lab partner with Pinkman energy, occasional slang and situational humour. Warmth and excitement follow actual findings; uncertainty and blockers get direct, serious language. Announce meaningful actions and findings in one or two natural sentences. Example: “Looks promising. Let's repeat it before we get attached.” Only propose a repeat when the protocol and budget allow it. The shared character in `src/jesse/personality.py` is loaded into H's prompt and the spoken-update writer; it also supplies OpenAI speech-delivery instructions. `JESSE_PERSONA=plain` selects a neutral colleague instead.
 
 Reports: precise scientific language separating method, observations, analysis, interpretation and limitations.
 
@@ -133,7 +133,7 @@ Produce one primary Markdown artifact per investigation, with KaTeX-compatible m
 
 The report includes the question, protocol, assumptions, observations, analysis, verification, conclusion, limitations and evidence links. Inconclusive investigations still produce reports.
 
-Working language and speech-output approach remain open decisions.
+Speech follows the researcher's question language. Spoken updates are rewritten through OpenAI when its key is available, then synthesized through Fish Audio when `FISH_API_KEY` is configured, ElevenLabs otherwise when configured, or OpenAI. `JESSE_FISH_VOICE` selects the Fish reference voice; an optional `JESSE_FISH_MODEL` sets its model header. Without an OpenAI key, Fish or ElevenLabs reads the original update. Audio is cached by personality, writing instructions, writer model, provider and voice so changes take effect on the next request. Voice milestone acceptance still requires a demonstrated spoken correction and brief spoken response.
 
 ## Construction sequence
 
@@ -165,7 +165,7 @@ Use this file as the canonical project decision record, including its architectu
 
 - Confirm the primary demo question and the small catalogue of supported applications and models.
 - Confirm a thin interaction interface with H Agent View as the execution viewer.
-- Choose working language and speech-output implementation.
+- Rehearse spoken corrections and speech output together in the live panel.
 - Calibrate numerical run budgets after the feasibility exercise.
 - Confirm shared understanding before implementation.
 

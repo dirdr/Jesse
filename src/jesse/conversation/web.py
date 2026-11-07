@@ -151,7 +151,7 @@ def create_app(manager: RunManager | None = None, voice: VoiceListener | None = 
     @app.get("/api/runs/{run_id}/speech/{kind}/{index}")
     def indexed_speech(run_id: str, kind: Literal["steps", "actions"], index: int):
         if not speech_available():
-            raise HTTPException(409, "Set OPENAI_API_KEY or OPENAI_KEY to hear Jesse.")
+            raise HTTPException(409, "Set FISH_API_KEY, ELEVENLABS_API_KEY or OPENAI_API_KEY to hear Jesse.")
         speak = cached_step_speech if kind == "steps" else cached_action_speech
         try:
             path = speak(manager.folder(run_id), index)
@@ -166,7 +166,7 @@ def create_app(manager: RunManager | None = None, voice: VoiceListener | None = 
     @app.get("/api/runs/{run_id}/speech/{event_id}")
     def speech(run_id: str, event_id: str):
         if not speech_available():
-            raise HTTPException(409, "Set OPENAI_API_KEY or OPENAI_KEY to hear Jesse.")
+            raise HTTPException(409, "Set FISH_API_KEY, ELEVENLABS_API_KEY or OPENAI_API_KEY to hear Jesse.")
         try:
             path = cached_speech(manager.folder(run_id), event_id)
         except (ValueError, FileNotFoundError):

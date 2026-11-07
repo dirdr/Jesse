@@ -7,6 +7,7 @@ import sys
 import threading
 
 from jesse.runtime import json_value, save_json
+from jesse.personality import character
 from .preparation import PydanticRequestPreparer
 
 
@@ -74,7 +75,7 @@ class VoiceWorkflow:
                         "name": "jesse-voice-research",
                         "description": "Bounded research assistant in a hosted visual browser",
                         "model": "holo4-27b",
-                        "instructions": INSTRUCTIONS,
+                        "instructions": character() + "\n\n" + INSTRUCTIONS,
                         "environments": [{"id": "research-browser", "kind": "web",
                                           "mode": {"type": "visual", "width": 1280, "height": 900}}],
                     },
