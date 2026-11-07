@@ -1,12 +1,14 @@
 # Proposed team contracts
 
-Status: proposed contracts with partial implementation. Raw observation recording and bounded NetLogo rate analysis are implemented; catalogue selection, researcher input and the full report contract remain proposed. Owner A coordinates changes with the affected owners before integration. Use ordinary Python values and JSON files; no message broker is needed.
+Status: partial implementation. Catalogue selection, raw observation recording and bounded NetLogo rate analysis are implemented. The researcher-event/correction boundary and full report contract remain proposed. Owner A coordinates changes with the affected owners before integration. Use ordinary Python values and JSON files; no message broker is needed.
 
 ## Experiment definition
 
 Each approved investigation supplies `experiment_id`, `supported_questions`, `application`, `environment`, `launch_location`, `protocol`, `settings_schema`, `measurement_schema`, `assumptions`, `analysis_method`, `completion_criteria` and `interaction_status` (`unverified`, `verified` or `blocked`, with evidence).
 
 Start with one explicit NetLogo entry. Selection returns its ID and a brief scientific reason, or a blocked result for unsupported questions. A future coolant definition supplies its own units and analyzer through the same boundary. Reuse the controller and observation envelope; keep model-specific science in its slice. Registration is a proposal until GUI evidence establishes the required interactions.
+
+Current selection output: `status` (`ready` or `blocked`), original `question`, `reason`, `experiment_id`, `surface` and `maximum_trials`. Only the question and surface preference come from the researcher. The model proposes a registered ID and available surface; Python supplies the fixed trial limit and validates the selection. The initial catalogue/selector implementation is in `src/jesse/selecting`.
 
 ## Researcher input: voice or text → controller
 

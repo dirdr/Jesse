@@ -1,6 +1,6 @@
 # Jesse
 
-Status: NetLogo desktop and web feasibility implementation authorized. The first live web run recorded two GUI trials; replay acceptance remains pending. Native feasibility is blocked by Screen Recording permission. Remaining product choices apply to later slices.
+Status: bounded NetLogo web/desktop execution, observation recording, rate analysis and question-based catalogue routing are implemented. OpenAI/PydanticAI and H selection backends have passed live routing checks. Scientific replay acceptance and a full analysis-driven follow-up remain open; native interaction proof is still pending. Remaining product choices apply to later slices.
 
 Team constraints: three people, 24 hours until submission as of planning, with work expected to start in 8–10 hours. Plan around eight focused implementation hours.
 
@@ -8,7 +8,7 @@ For team task allocation and milestone handoffs, read [the hackathon work plan](
 
 ## Product
 
-Jesse is an autonomous research technician for software-based experimental investigations. One H agent selects a suitable application from an approved catalogue, plans and executes experiments through its interface, analyzes measurements, investigates discrepancies, and produces a traceable scientific Markdown report.
+Jesse is an autonomous research technician for software-based experimental investigations. A research planner selects a suitable protocol and surface from an approved catalogue. An H computer-use agent executes the experiment through its interface. The target workflow analyzes measurements, investigates discrepancies and produces a traceable scientific Markdown report.
 
 An unknown experiment is an unknown sample or unanswered question within supported protocols and simulations. The agent may adapt measurements and move between supported activities. Findings describe the configured simulator and its assumptions.
 
@@ -48,9 +48,9 @@ Retain five stories: Result Detective, Protocol Reproducer, Hands-Free Technicia
 
 ## Python and H responsibilities
 
-Q10 accepted for the MVP: one H agent with a lightweight Python controller. Revisit this boundary only when a concrete requirement justifies a change.
+Q10 evolved with the user's question-routing requirement: retain one H computer-use operator and the lightweight Python controller, and add a replaceable catalogue-selection step before execution. The default selector uses PydanticAI with OpenAI; an explicit H tool-only selector is available through `--planner h`. These are alternative backends, not simultaneous planners. The full autonomous research-manager loop remains future work.
 
-Use one H reasoning and computer-use agent. A lightweight Python controller manages sessions, executes custom tools, validates records, persists state, and enforces budgets. H chooses GUI actions and follow-up experiments. H's runtime manages the observation, model, action and tool loop; the SDK executes custom tools in our application while processing the session. An additional orchestration framework is not required for the MVP.
+The selector returns a typed proposal; Python checks the registered protocol, actual surface availability and the researcher's explicit surface preference before launching H. The model cannot choose an arbitrary executor or expand the two-trial protocol. The controller manages sessions, executes custom tools, validates records, persists state and enforces a shared selection/execution budget. H chooses GUI actions. H's runtime manages the observation, model, action and tool loop; the SDK executes custom tools in our application while processing the session.
 
 Expose tools for inspecting the approved application catalogue, recording observations, running predefined analyses, and assembling reports. Supply bounded protocols and assumptions directly in the investigation context. RAG, vector search, corpus backfill and retrieval of earlier investigations are outside the product scope.
 
@@ -74,9 +74,9 @@ The public HoloDesktop CLI repository now installs the CLI distributed with the 
 
 ## Architecture
 
-Jesse has one local Python controller and one hosted H computer-use agent. Python owns session lifecycle, budgets, validated records and artifacts; H owns GUI actions and experimental decisions. Gladia is the planned speech-input adapter. Desktop and web are alternative execution surfaces for a selected experiment.
+Jesse has one local Python controller, a replaceable protocol selector and one hosted H computer-use operator. Python owns session lifecycle, budgets, validated records and artifacts; H owns GUI actions. The selector uses either OpenAI through PydanticAI or a separate H tool-only planning session. Gladia is the planned speech-input adapter. Desktop and web are alternative execution surfaces for a selected experiment.
 
-Solid connections show implemented paths; dashed connections show planned capabilities. The native adapter is implemented but still awaits the required permission and interaction proof. Experiment instructions are supplied today; automatic catalogue selection is planned.
+Solid connections show implemented paths; dashed connections show planned capabilities. The native adapter is implemented but still awaits interaction proof. Catalogue selection is implemented for one bounded protocol; other applications and scientific inference remain future work.
 
 ```mermaid
 flowchart TB
@@ -86,6 +86,8 @@ flowchart TB
 
     subgraph LOCAL["Jesse - local Python application"]
         C["Controller<br/>Preflight, sessions, budgets and cancellation"]
+        P["Catalogue selector<br/>OpenAI through PydanticAI, or H"]
+        K["Approved experiment definitions<br/>Capabilities, surfaces and limits"]
         I["Agent context<br/>Personality and experiment protocol"]
         R["Observation recording<br/>Validation and idempotent writes"]
         A["Scientific analysis<br/>Predefined Python methods - planned"]
@@ -102,6 +104,9 @@ flowchart TB
     D["Local desktop connection<br/>NetLogo Desktop - permission required"]
 
     U -->|"Start text-driven run"| C
+    C -->|"Submit question and available surfaces"| P
+    K -->|"Describe supported protocols"| P
+    P -->|"Return proposal for Python validation"| C
     U -.->|"Speak a question or correction"| G
     G -.->|"Deliver final transcript"| C
     I -->|"Supply behavior and protocol"| C
@@ -134,6 +139,8 @@ Keep one desktop operator and one custom-tool executor. Additional agent provide
 ## Application catalogue and investigation records
 
 Maintain a small explicit catalogue of approved tools. Each entry specifies scientific questions supported, available models or activities, launch location, browser or desktop environment, controllable parameters, observable outputs, assumptions, and tested interaction status. Candidate entries: ChemCollective, NetLogo and Algodoo. Inclusion is a proposal until its required GUI interactions have been demonstrated with H.
+
+`src/jesse/selecting/domain.py` now registers the Enzyme Kinetics feasibility protocol. `jesse "question"` selects and executes it; `--catalogue` lists capabilities and `--plan-only` routes without GUI execution. Only registered executors are dispatched. Unsupported questions and unavailable requested surfaces produce blocked reports. The direct `jesse-netlogo` command remains available without a selector API call. Anthropic credentials may be configured locally, but no Anthropic adapter is implemented.
 
 Select the application that supports the requested measurement and explain the choice briefly. Use another application only when it contributes a relevant experimental or analysis capability. Shared subject matter alone does not make results from different models comparable. Unsupported questions produce a blocked outcome with the missing capability identified.
 

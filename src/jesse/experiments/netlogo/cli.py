@@ -15,8 +15,8 @@ from .preflight import check_desktop, checks_payload
 def execute(folder: Path, budget_seconds: int, application: str | None, surface: str) -> None:
     records = FileExperimentRecords(folder)
     try:
-        from .domain import build_prompt
-        outcome = run_experiment(HDesktopAgent(budget_seconds, surface=surface), records, build_prompt(surface, application))
+        instructions = (folder / "protocol.md").read_text(encoding="utf-8")
+        outcome = run_experiment(HDesktopAgent(budget_seconds, surface=surface), records, instructions)
         if outcome == "blocked":
             raise SystemExit(1)
     except KeyboardInterrupt:
@@ -79,14 +79,20 @@ def main(argv: list[str] | None = None) -> int:
         print(f"Blocked: {reason}")
         return 1
 
-    # Freeze the actual instructions with the run for reproducibility.
+    return run_ready_experiment(folder, args.timeout, str(application) if application else None, args.surface)
+
+
+def run_ready_experiment(folder: Path, budget_seconds: int, application_path: str | None, surface: str, question: str | None = None) -> int:
+    """Execute an already selected/preflighted protocol in the same run folder."""
+    if not 1 <= budget_seconds <= 600 or surface not in {"desktop", "web"}:
+        raise ValueError("Invalid execution budget or surface")
+    records = FileExperimentRecords(folder)
     from .domain import build_prompt
-    application_path = str(application) if application else None
-    (folder / "protocol.md").write_text(build_prompt(args.surface, application_path), encoding="utf-8")
-    process = multiprocessing.get_context("spawn").Process(target=execute, args=(folder, args.timeout, application_path, args.surface))
+    (folder / "protocol.md").write_text(build_prompt(surface, application_path, question), encoding="utf-8")
+    process = multiprocessing.get_context("spawn").Process(target=execute, args=(folder, budget_seconds, application_path, surface))
     try:
         process.start()
-        process.join(args.timeout)
+        process.join(budget_seconds)
         if process.is_alive():
             stop_worker(process)
             records.finish("inconclusive", "Run budget exhausted; desktop worker stopped. Earlier evidence is retained.")

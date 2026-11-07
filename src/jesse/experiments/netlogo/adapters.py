@@ -40,20 +40,27 @@ class HDesktopAgent:
 
         def record_observation(
             observation_id: str, trial_id: str,
-            settings: dict[str, Any], quantity: str, value: float | None,
+            volume: float | None, kc: float | None, kd: float | None,
+            kr: float | None, pause: bool | None, value: float | None,
             unit: str | None, raw_reading: str, evidence: list[str],
-            interval: dict[str, Any], status: str, reason: str | None = None,
+            start_tick: float | None, end_tick: float | None,
+            status: str, reason: str | None = None,
         ) -> dict:
             """Save a raw GUI reading immediately. Reuse IDs only for identical retries.
 
-            settings contains actual visible control labels/values. interval has
-            start, end, unit, with null for unknown fields. The controller timestamps
-            recording. status is observed, unreadable or interrupted. Evidence references
-            identify actual screenshots/session events. Unknown units are null.
+            Pass the observed controls as scalar arguments: volume is VOLUME,
+            kc/kd/kr are Kc/Kd/Kr, pause is PAUSE?. start_tick and end_tick
+            identify the observed interval. Unknown values/units are null. The
+            controller supplies the timestamp, control labels and rate quantity.
+            status is observed, unreadable or interrupted. Preserve raw displayed
+            output and actual evidence references. Require recorded=true before
+            continuing; after a failed correction stop and report the blocker.
             """
             observation = Observation(
-                observation_id, trial_id, datetime.now(timezone.utc).isoformat(), settings, quantity, value,
-                unit, raw_reading, evidence, interval, status, reason,
+                observation_id, trial_id, datetime.now(timezone.utc).isoformat(),
+                {"VOLUME": volume, "Kc": kc, "Kd": kd, "Kr": kr, "PAUSE?": pause},
+                "reaction velocity (V)", value, unit, raw_reading, evidence,
+                {"start": start_tick, "end": end_tick, "unit": "ticks"}, status, reason,
             )
             return records.record_observation(observation)
 

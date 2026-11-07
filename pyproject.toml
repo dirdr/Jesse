@@ -9,6 +9,7 @@ dependencies = [
 ]
 
 [project.scripts]
+jesse = "jesse.selecting.cli:main"
 jesse-netlogo = "jesse.experiments.netlogo.cli:main"
 jesse-analyze = "jesse.analyzing.cli:main"
 

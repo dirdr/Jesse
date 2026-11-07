@@ -12,6 +12,26 @@ uv sync
 
 If `.env` does not exist, copy `.env.example` to `.env` and fill `HAI_API_KEY` locally. Gladia is not required for these tests. Secrets and `runs/` are ignored by Git.
 
+## Start from a research question
+
+```sh
+uv run --env-file .env jesse "Does adding more substrate make an enzyme reaction faster?" --surface web
+```
+
+The default selector uses OpenAI through PydanticAI. Set `OPENAI_KEY` or `OPENAI_API_KEY`; optionally set `OPENAI_MODEL` (default: `gpt-5-mini`). Python validates its selected protocol and surface before starting H. Selection and execution share the `--timeout` budget, which defaults to 300 seconds and cannot exceed 600 seconds.
+
+```sh
+uv run jesse --catalogue
+uv run --env-file .env jesse "Compare enzyme reaction rates at different substrate quantities" --plan-only
+uv run --env-file .env jesse "Compare enzyme reaction rates at different substrate quantities" --planner h
+```
+
+`--planner h` uses the existing H key for a tool-only catalogue-selection session; it has no browser or desktop environment. `--plan-only` may call the selected provider but never starts simulator interaction. With `--surface auto` (the default), the selector chooses from surfaces that pass preflight; web is preferred for equivalent capabilities. An explicit web/desktop preference is enforced. Unsupported questions return blocked instead of opening unrelated software.
+
+The catalogue currently contains only the Enzyme Kinetics two-trial feasibility protocol. It does not perform a saturation study or automatically execute follow-ups. Anthropic is not integrated. The direct commands below bypass the selector and require only the H key.
+
+Selection artifacts include `request.json`, `catalogue.json`, `availability.json`, `selection.json` and `planning-metrics.json`. H-backed selection also saves `planner-session.json` and `planner-events.jsonl`. Simulator evidence goes into the same run directory.
+
 ## Watch a web run live
 
 ```sh

@@ -49,7 +49,13 @@ class FakeHandle:
         saved = json.loads((self.records.folder / "session.json").read_text())
         assert saved["agent_view_url"] == "https://example.test/view"
         yield {"type": "SyntheticEvent", "id": "1"}
-        self.tool(**{key: value for key, value in synthetic_reading().items() if key != "observed_at"})
+        observation = synthetic_reading()
+        self.tool(
+            observation_id=observation["observation_id"], trial_id=observation["trial_id"],
+            volume=10, kc=1, kd=1, kr=1, pause=True, value=observation["value"],
+            unit=observation["unit"], raw_reading=observation["raw_reading"],
+            evidence=observation["evidence"], start_tick=0, end_tick=30, status="observed",
+        )
         self.analysis_tool()
         if self.fail:
             raise RuntimeError("Synthetic connection failure")
@@ -69,6 +75,8 @@ class FakeClient:
         from hai_agents.tools import as_tools
         tools = as_tools(kwargs["tools"])
         assert tools[0].definition()["input_schema"]["type"] == "object"
+        assert "settings" not in tools[0].input_schema["properties"]
+        assert {"volume", "kc", "kd", "kr", "pause"} <= set(tools[0].input_schema["properties"])
         self.handle.tool = tools[0]
         self.handle.analysis_tool = tools[1]
         self.params = kwargs
@@ -87,6 +95,9 @@ class ExperimentTests(unittest.TestCase):
             self.assertEqual(session["status"], "completed")
             self.assertIn("Synthetic test report", (records.folder / "agent-report.md").read_text())
             self.assertTrue((records.folder / "observations/obs-1.json").exists())
+            reading = json.loads((records.folder / "observations/obs-1.json").read_text())
+            self.assertEqual(reading["settings"], {"VOLUME": 10, "Kc": 1, "Kd": 1, "Kr": 1, "PAUSE?": True})
+            self.assertEqual(reading["quantity"], "reaction velocity (V)")
             self.assertIn("SyntheticEvent", (records.folder / "events.jsonl").read_text())
             self.assertEqual(client.params["agent"]["environments"][0]["kind"], "web")
             self.assertEqual(client.params["max_time_s"], 600)

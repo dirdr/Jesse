@@ -114,7 +114,7 @@ Gladia supplies transcription in the current design. Speech output remains a sep
 
 ## Demo readiness checklist
 
-The demo should show a question becoming an experiment, a checked comparison, a justified follow-up, and a report with evidence. Checked items have implementation or recorded-run evidence; they do not imply that an entire gate has passed. G0 replay acceptance, G1 selection and the full G2 investigation remain open.
+The demo should show a question becoming an experiment, a checked comparison, a justified follow-up, and a report with evidence. Checked items have implementation or recorded-run evidence; they do not imply that an entire gate has passed. G0 replay acceptance and the full G2 investigation remain open. G1 catalogue routing and record persistence are implemented.
 
 ### Available foundations
 
@@ -127,13 +127,13 @@ The demo should show a question becoming an experiment, a checked comparison, a 
 - [x] Compare saved rates with Python after checking settings, quantities, units and intervals.
 - [x] Save derived analysis separately and recommend checks or independent repeats.
 - [x] H calls the analyzer during a live web run and reports its validation result. The second live run returned `not_comparable` because rate units were unknown.
+- [x] Register the first protocol, accept a research question, and validate the proposed protocol and available surface. Both OpenAI and H selection backends have passed live routing checks; H also blocked an unsupported coolant request.
 
 ### Required for a convincing experiment
 
 | Priority | Owner | Deliverable | Acceptance criterion |
 | --- | --- | --- | --- |
 | P0 | A + B | Verify the existing web evidence | Inspect replay and match both control settings and displayed readings to the stored observations. |
-| P0 | A + B | Accept a research question and select a protocol | A supported request selects the correct catalogue entry with a reason; an unsupported request returns blocked. |
 | P0 | B | Define the complete measurement protocol | Agree on substrate levels, repeats, rate definition, units and comparison rule using observed timings. |
 | P0 | A + B | Complete one analysis-driven follow-up | H explains why it repeats or changes a measurement, executes it within the agreed budget and links the result to the analysis. |
 | P0 | A + B | Diagnose one discrepancy | A condition mismatch or failed reading triggers a relevant check; original measurements remain available. |
@@ -157,7 +157,15 @@ The demo should show a question becoming an experiment, a checked comparison, a 
 - [ ] Add a custom model, direct Excel automation or another agent provider when the selected demo requires it.
 - [ ] Build a product UI if the CLI, Agent View and Markdown viewer do not support the rehearsed presentation.
 
-Next integration sequence: verify G0 evidence, complete G1 question routing, then demonstrate the full G2 analysis/follow-up loop. The bounded comparison tool is a building block, not completion of G2. Numerical repeat counts and full-investigation budgets still need calibration.
+Next integration sequence: verify the recorded GUI evidence and rate units, then demonstrate the full G2 analysis/follow-up loop. The bounded comparison tool is a building block, not completion of G2. Numerical repeat counts and full-investigation budgets still need calibration.
+
+### Teammate handoff
+
+- A: own `selecting` and the H runner. Complete replay verification, native interaction proof and the bounded follow-up path.
+- B: own `analyzing` and the scientific protocol. Confirm the rate definition/units, choose levels and repeats, and audit the scientific report.
+- C: build a voice slice around Gladia final transcripts and a separate speech-output adapter. Text events should contain stable identity, transcript and run identity. Coordinate the active-run correction queue with A; it is not implemented yet.
+
+Start with `uv sync`, then run `uv run --env-file .env jesse "Compare enzyme reaction rates at different substrate quantities" --plan-only`. Credentials and run artifacts are local and are not pushed to GitHub. Each teammate needs their own `.env`.
 
 ## Documentation for the operating agent
 

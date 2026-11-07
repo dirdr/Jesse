@@ -75,7 +75,44 @@ class SelectionTests(unittest.TestCase):
     def test_provider_adapter_returns_the_typed_proposal(self):
         from pydantic_ai.usage import RunUsage
         output = PlannerOutput(decision="select", experiment_id=CATALOGUE[0].experiment_id, surface="web", reason="A bounded preliminary comparison is available.")
-        result = SimpleNamespace(output=output, usage=lambda: RunUsage())
+        result = SimpleNamespace(output=output, usage=RunUsage())
         with patch.dict("os.environ", {"OPENAI_API_KEY": "synthetic-key"}), patch("pydantic_ai.Agent.run_sync", return_value=result):
             proposed = PydanticExperimentPlanner().propose("Compare rates", CATALOGUE, {"web"}, "auto")
         self.assertEqual(proposed.surface, "web")
+
+    def test_h_selector_uses_a_catalogue_tool_without_provisioning_a_gui(self):
+        from jesse.selecting.adapters import HExperimentPlanner
+        from hai_agents.tools import as_tools
+
+        class Handle:
+            id = "synthetic-planner-session"
+            cancelled = False
+
+            def get(self):
+                return SimpleNamespace(agent_view_url="https://example.test/planner")
+
+            def stream(self, **kwargs):
+                payload = self.catalogue_tool()
+                self.catalogue = payload
+                yield {"type": "SyntheticPlannerEvent"}
+
+            def wait_for_completion(self, **kwargs):
+                return SimpleNamespace(status="completed", answer=PlannerOutput(decision="select", experiment_id=CATALOGUE[0].experiment_id, surface="web", reason="Supported preliminary comparison."))
+
+            def cancel(self):
+                self.cancelled = True
+
+        handle = Handle()
+
+        class Client:
+            def start_session(self, **params):
+                self.params = params
+                handle.catalogue_tool = as_tools(params["tools"])[0]
+                return handle
+
+        client = Client()
+        selection = select_experiment("Compare substrate rates", CATALOGUE, {"web"}, HExperimentPlanner(client=client))
+        self.assertEqual(selection.status, "ready")
+        self.assertEqual(client.params["agent"]["environments"], [])
+        self.assertEqual(handle.catalogue["available_surfaces"], ["web"])
+        self.assertTrue(handle.cancelled)
