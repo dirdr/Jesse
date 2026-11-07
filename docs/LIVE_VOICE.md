@@ -107,8 +107,8 @@ uv run --env-file .env python -m jesse.voice.live --silence-seconds 2.5
 ```
 
 Press Ctrl+C to stop listening; the preview waits for remaining final transcripts
-before closing. Gladia automatically detects the language using its default
-configuration. Live sessions are billed by Gladia and require internet access.
+before closing. Detection is restricted to French and English (per-utterance switching), and Gladia's audio
+enhancer plus a strict speech threshold (0.8) reduce background voices and noise. Live sessions are billed by Gladia and require internet access.
 
 If partial transcripts continue while nobody is speaking, check for background
 speech, audio playing through speakers, or an unintended input source. Gladia

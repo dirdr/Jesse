@@ -11,7 +11,9 @@ from collections.abc import Callable
 from gladiaio_sdk import (
     GladiaClient,
     LiveV2InitRequest,
+    LiveV2LanguageConfig,
     LiveV2MessagesConfig,
+    LiveV2PreProcessingConfig,
     LiveV2WebSocketMessage,
 )
 
@@ -24,6 +26,10 @@ BLOCK_SIZE = 3200
 START_TIMEOUT = 30
 STOP_TIMEOUT = 30
 TURN_SILENCE = 1.5
+# Restrict detection to the languages researchers actually speak; open auto-detection drifts on short or noisy turns.
+LANGUAGES = ("fr", "en")
+# Close to 1 rejects more background sound (other voices, speakers) as non-speech.
+SPEECH_THRESHOLD = 0.8
 
 
 def print_turn(transcript: str) -> None:
@@ -47,6 +53,8 @@ def run_live_preview(
     on_partial: Callable[[str], None] = print_partial,
     silence_seconds: float = TURN_SILENCE,
     input_device: int | None = None,
+    languages: tuple[str, ...] = LANGUAGES,
+    speech_threshold: float = SPEECH_THRESHOLD,
 ) -> None:
     turns = TurnAssembler(silence_seconds)
     session = client.live().start_session(
@@ -58,6 +66,8 @@ def run_live_preview(
             channels=1,
             endpointing=0.3,
             maximum_duration_without_endpointing=15,
+            language_config=LiveV2LanguageConfig(languages=list(languages), code_switching=len(languages) > 1),
+            pre_processing=LiveV2PreProcessingConfig(audio_enhancer=True, speech_threshold=speech_threshold),
             messages_config=LiveV2MessagesConfig(
                 receive_partial_transcripts=True,
                 receive_final_transcripts=True,

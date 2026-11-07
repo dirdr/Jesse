@@ -108,9 +108,11 @@ class LiveVoiceTests(unittest.TestCase):
 
         self.assertEqual(client.options.model, "solaria-1")
         self.assertEqual(client.options.encoding, "wav/pcm")
-        self.assertIsNone(client.options.language_config)
         self.assertTrue(client.options.messages_config.receive_partial_transcripts)
         self.assertTrue(client.options.messages_config.receive_speech_events)
+        self.assertEqual(client.options.language_config.languages, ["fr", "en"])
+        self.assertTrue(client.options.pre_processing.audio_enhancer)
+        self.assertGreaterEqual(client.options.pre_processing.speech_threshold, 0.8)
         self.assertEqual(client.options.endpointing, 0.3)
         self.assertEqual(client.options.maximum_duration_without_endpointing, 15)
         self.assertEqual(streams[0].options, {
