@@ -25,7 +25,7 @@ export function useRun() {
     setRunId(id)
   }, [])
 
-  // Open ?run=<id> as a replay, otherwise resume the controller's active investigation.
+  // Open ?run=<id> as a replay, otherwise resume the controller's investigation only while it is still running.
   useEffect(() => {
     const requested = runFromUrl()
     if (requested) {
@@ -34,8 +34,8 @@ export function useRun() {
     }
     api
       .current()
-      .then(({ run_id }) => {
-        if (run_id) attach(run_id, false)
+      .then(async ({ run_id }) => {
+        if (run_id && (await api.snapshot(run_id)).active) attach(run_id, false)
       })
       .catch(() => undefined)
   }, [attach])
