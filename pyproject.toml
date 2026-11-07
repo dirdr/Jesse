@@ -4,8 +4,10 @@ version = "0.1.0"
 description = "Autonomous experimental investigations through computer use"
 requires-python = ">=3.13,<3.14"
 dependencies = [
-    "hai-agents[cli,desktop]",
     "pydantic-ai-slim[openai]>=2.66,<3",
+    "gladiaio-sdk>=2.2.1",
+    "hai-agents[cli,desktop]",
+    "sounddevice>=0.5.6",
 ]
 
 [project.scripts]

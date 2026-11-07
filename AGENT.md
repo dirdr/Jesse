@@ -60,7 +60,7 @@ Operate the selected approved simulator through its browser or native desktop in
 
 Use hosted H sessions and retain agent_view_url for live viewing and replay in H Agent View. Keep one backend executor for custom tools; additional observers remain read-only. The backend must remain running while tool execution is needed.
 
-Gladia supplies voice transcription. Spoken responses require a separate speech-output implementation. Devin and Linkup are outside the MVP.
+Gladia supplies voice transcription. The voice preview streams microphone audio to Gladia, groups final utterances into silence-delimited researcher turns, and prints requests without sending them to H. It does not yet maintain a conversation with H. Spoken responses require a separate speech-output implementation. Devin and Linkup are outside the MVP.
 
 ## H harness and extension boundaries
 
