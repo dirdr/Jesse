@@ -1,83 +1,103 @@
-import { useEffect, useRef, useState } from "react"
+import { useEffect, useState } from "react"
 import { Toaster } from "@/components/ui/sonner"
 import { TooltipProvider } from "@/components/ui/tooltip"
 import { Header } from "@/components/header"
-import { Welcome } from "@/components/welcome"
-import { Feed } from "@/components/feed"
-import { Composer } from "@/components/composer"
-import { Details } from "@/components/details"
+import { Launcher } from "@/components/launcher"
+import { LiveScreen } from "@/components/live-screen"
+import { ActivityPanel, MeasurementsPanel, PlanPanel } from "@/components/side-panels"
+import { SteerBar } from "@/components/steer-bar"
+import { OutcomeBadge, ReportSheet } from "@/components/details"
 import { useRun } from "@/lib/use-run"
 
 declare global {
   interface Window {
-    /** Entry point for a voice adapter (e.g. Gladia): call once per final transcript. */
+    /** Voice adapter entry (e.g. Gladia): one call per final transcript. Starts a run or steers the live one. */
     jesseSubmit?: (text: string, source?: "text" | "voice") => Promise<boolean>
   }
 }
 
 export default function App() {
   const run = useRun()
-  const [draft, setDraft] = useState("")
-  const scroller = useRef<HTMLDivElement>(null)
+  const [pinned, setPinned] = useState<number | null>(null)
+  const [reportOpen, setReportOpen] = useState(false)
   const hasRun = run.runId !== null
-  const events = run.snapshot?.events ?? []
-  const lastAuthor = events.at(-1)?.author
-  const working = Boolean(run.snapshot?.active && run.snapshot.status !== "waiting" && lastAuthor !== "jesse")
+  const live = run.live
+  const snapshot = run.snapshot
+  const finished = Boolean(snapshot && !snapshot.active)
 
   useEffect(() => {
-    window.jesseSubmit = run.submit
+    setPinned(null)
+    setReportOpen(false)
+  }, [run.runId])
+
+  useEffect(() => {
+    window.jesseSubmit = (text, source = "voice") => (hasRun && snapshot?.active ? run.steer(text, source) : run.start(text))
     return () => {
       delete window.jesseSubmit
     }
-  }, [run.submit])
-
-  useEffect(() => {
-    scroller.current?.scrollTo({ top: scroller.current.scrollHeight, behavior: "smooth" })
-  }, [events.length, working])
+  }, [hasRun, snapshot?.active, run])
 
   return (
     <TooltipProvider delayDuration={300}>
-      <div className="flex h-full flex-col">
+      <div className="flex min-h-full flex-col">
         <Header
-          snapshot={run.snapshot}
+          snapshot={snapshot}
+          live={live}
           hasRun={hasRun}
+          replay={run.replay}
           voiceOn={run.voiceOn}
+          reportReady={Boolean(run.report)}
           onToggleVoice={run.toggleVoice}
           onStop={run.stop}
-          onNew={() => {
-            run.reset()
-            setDraft("")
-          }}
+          onNew={run.reset}
+          onReport={() => setReportOpen(true)}
         />
 
-        <main className="mx-auto grid min-h-0 w-full max-w-[1400px] flex-1 grid-cols-1 gap-6 px-4 sm:px-6 lg:grid-cols-[minmax(0,1fr)_400px]">
-          <section className={"flex min-h-0 min-w-0 flex-col " + (hasRun ? "" : "lg:col-span-2")}>
-            <div ref={scroller} className="min-h-0 flex-1 overflow-y-auto">
-              {hasRun ? (
-                <Feed events={events} working={working} />
+        {!hasRun ? (
+          <main className="flex flex-1 px-4 sm:px-6">
+            <Launcher busy={run.busy} onStart={run.start} />
+          </main>
+        ) : (
+          <main className="mx-auto grid w-full max-w-[1600px] flex-1 grid-cols-1 gap-5 px-4 py-5 sm:px-6 xl:grid-cols-[minmax(0,1fr)_400px]">
+            <div className="flex min-w-0 flex-col gap-4">
+              <LiveScreen
+                runId={run.runId!}
+                frames={live?.frames ?? []}
+                actions={live?.actions ?? []}
+                active={Boolean(snapshot?.active)}
+                replay={run.replay}
+                pinned={pinned}
+                onPin={setPinned}
+              />
+              {finished && snapshot?.outcome ? (
+                <div className="flex flex-wrap items-center gap-3 rounded-2xl border border-border/70 bg-card/70 px-4 py-3 backdrop-blur">
+                  <OutcomeBadge outcome={snapshot.outcome.outcome} />
+                  <p className="min-w-0 flex-1 text-sm text-muted-foreground">{snapshot.outcome.reason}</p>
+                  {run.report && (
+                    <button type="button" onClick={() => setReportOpen(true)} className="text-sm font-medium text-brand hover:underline">
+                      Read the report
+                    </button>
+                  )}
+                </div>
               ) : (
-                <Welcome onPick={setDraft} />
+                !run.replay && <SteerBar enabled={Boolean(snapshot?.can_message)} busy={run.busy} onSend={(text) => run.steer(text)} />
               )}
             </div>
-            <div className="pt-2 pb-4">
-              <Composer
-                snapshot={run.snapshot}
-                hasRun={hasRun}
-                busy={run.busy}
-                draft={draft}
-                onDraft={setDraft}
-                onSubmit={run.submit}
-              />
-            </div>
-          </section>
 
-          {hasRun && (
-            <aside className="hidden min-h-0 overflow-y-auto py-6 lg:block">
-              <Details snapshot={run.snapshot} report={run.report} />
+            <aside className="flex min-w-0 flex-col gap-4 xl:sticky xl:top-[4.5rem] xl:max-h-[calc(100vh-5.5rem)]">
+              <PlanPanel plan={live?.plan ?? []} />
+              <MeasurementsPanel measurements={live?.measurements ?? []} />
+              <ActivityPanel
+                actions={live?.actions ?? []}
+                events={snapshot?.events ?? []}
+                selectedFrame={pinned}
+                onSelectFrame={setPinned}
+              />
             </aside>
-          )}
-        </main>
+          </main>
+        )}
       </div>
+      <ReportSheet open={reportOpen} onOpenChange={setReportOpen} snapshot={snapshot} report={run.report} />
       <Toaster position="top-center" richColors />
     </TooltipProvider>
   )

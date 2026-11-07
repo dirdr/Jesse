@@ -2,11 +2,8 @@ import ReactMarkdown from "react-markdown"
 import remarkGfm from "remark-gfm"
 import remarkMath from "remark-math"
 import rehypeKatex from "rehype-katex"
-import { motion } from "motion/react"
-import { CheckCircle2, CircleHelp, ExternalLink, FileText, Globe, Monitor, OctagonAlert } from "lucide-react"
-import { Card, CardContent, CardHeader, CardTitle } from "@/components/ui/card"
-import { Badge } from "@/components/ui/badge"
-import { Skeleton } from "@/components/ui/skeleton"
+import { CheckCircle2, CircleHelp, ExternalLink, Globe, Monitor, OctagonAlert } from "lucide-react"
+import { Sheet, SheetContent, SheetDescription, SheetHeader, SheetTitle } from "@/components/ui/sheet"
 import { cn } from "@/lib/utils"
 import type { Snapshot } from "@/lib/api"
 
@@ -16,106 +13,60 @@ const OUTCOME = {
   blocked: { label: "Blocked", icon: OctagonAlert, className: "text-destructive bg-destructive/10 ring-destructive/25" },
 } as const
 
-function prettyExperiment(id: string | null) {
-  if (!id) return "None"
+export function experimentName(id: string | null | undefined) {
+  if (!id) return null
   if (id.startsWith("chemcollective")) return "ChemCollective coolant"
   if (id.startsWith("netlogo")) return "NetLogo Enzyme Kinetics"
   return id
 }
 
-function Field({ label, children }: { label: string; children: React.ReactNode }) {
+export function OutcomeBadge({ outcome }: { outcome: string }) {
+  const style = OUTCOME[outcome as keyof typeof OUTCOME]
+  if (!style) return null
   return (
-    <div className="grid grid-cols-[88px_minmax(0,1fr)] gap-3 py-2 text-sm">
-      <dt className="text-muted-foreground">{label}</dt>
-      <dd className="min-w-0 [overflow-wrap:anywhere]">{children}</dd>
-    </div>
+    <span className={cn("inline-flex w-fit items-center gap-1.5 rounded-full px-2.5 py-1 text-sm font-medium ring-1 ring-inset", style.className)}>
+      <style.icon className="size-4" /> {style.label}
+    </span>
   )
 }
 
-export function Details({ snapshot, report }: { snapshot: Snapshot | null; report: string | null }) {
+export function ReportSheet({
+  open,
+  onOpenChange,
+  snapshot,
+  report,
+}: {
+  open: boolean
+  onOpenChange: (open: boolean) => void
+  snapshot: Snapshot | null
+  report: string | null
+}) {
   const selection = snapshot?.selection
   const outcome = snapshot && !snapshot.active ? snapshot.outcome : null
-  const outcomeStyle = outcome ? OUTCOME[outcome.outcome as keyof typeof OUTCOME] : undefined
-
   return (
-    <motion.div
-      initial={{ opacity: 0, x: 16 }}
-      animate={{ opacity: 1, x: 0 }}
-      transition={{ duration: 0.35, ease: "easeOut" }}
-      className="flex min-w-0 flex-col gap-4"
-    >
-      <Card className="gap-2 border-border/70 bg-card/70 py-4 backdrop-blur">
-        <CardHeader className="px-5">
-          <CardTitle className="text-sm font-medium text-muted-foreground">Experiment</CardTitle>
-        </CardHeader>
-        <CardContent className="px-5">
-          {selection ? (
-            <dl className="divide-y divide-border/60">
-              <Field label="Simulator">
-                <span className="font-medium">{prettyExperiment(selection.experiment_id)}</span>
-              </Field>
-              <Field label="Surface">
-                {selection.surface ? (
-                  <Badge variant="secondary" className="gap-1">
-                    {selection.surface === "web" ? <Globe className="size-3" /> : <Monitor className="size-3" />}
-                    {selection.surface === "web" ? "Hosted browser" : "This Mac"}
-                  </Badge>
-                ) : (
-                  "-"
-                )}
-              </Field>
-              {selection.maximum_trials != null && <Field label="Trial limit">{selection.maximum_trials}</Field>}
-              <Field label="Why">
-                <span className="text-muted-foreground">{selection.reason}</span>
-              </Field>
-            </dl>
-          ) : (
-            <div className="space-y-2 py-1">
-              <Skeleton className="h-4 w-3/4" />
-              <Skeleton className="h-4 w-1/2" />
-              <p className="pt-1 text-xs text-muted-foreground">Matching your question to an approved simulator…</p>
-            </div>
-          )}
-        </CardContent>
-      </Card>
-
-      {outcome && (
-        <Card className="gap-2 border-border/70 bg-card/70 py-4 backdrop-blur">
-          <CardHeader className="px-5">
-            <CardTitle className="text-sm font-medium text-muted-foreground">Outcome</CardTitle>
-          </CardHeader>
-          <CardContent className="flex flex-col gap-2 px-5">
-            {outcomeStyle && (
-              <span
-                className={cn(
-                  "inline-flex w-fit items-center gap-1.5 rounded-full px-2.5 py-1 text-sm font-medium ring-1 ring-inset",
-                  outcomeStyle.className,
-                )}
-              >
-                <outcomeStyle.icon className="size-4" /> {outcomeStyle.label}
+    <Sheet open={open} onOpenChange={onOpenChange}>
+      <SheetContent className="w-full gap-0 overflow-y-auto sm:max-w-2xl">
+        <SheetHeader className="border-b border-border/70 pb-4">
+          <SheetTitle>Investigation report</SheetTitle>
+          <SheetDescription>{selection?.question ?? "Report for this investigation"}</SheetDescription>
+          <div className="mt-2 flex flex-wrap items-center gap-2 text-xs">
+            {outcome && <OutcomeBadge outcome={outcome.outcome} />}
+            {experimentName(selection?.experiment_id) && (
+              <span className="inline-flex items-center gap-1 rounded-full bg-muted px-2 py-1 font-medium">
+                {selection?.surface === "desktop" ? <Monitor className="size-3" /> : <Globe className="size-3" />}
+                {experimentName(selection?.experiment_id)}
               </span>
             )}
-            {outcome.reason && <p className="text-sm text-muted-foreground">{outcome.reason}</p>}
-          </CardContent>
-        </Card>
-      )}
-
-      {report && snapshot?.report_url && (
-        <Card className="min-h-0 gap-3 border-border/70 bg-card/70 py-4 backdrop-blur">
-          <CardHeader className="flex flex-row items-center justify-between px-5">
-            <CardTitle className="flex items-center gap-2 text-sm font-medium text-muted-foreground">
-              <FileText className="size-4" /> Report
-            </CardTitle>
-            <a
-              href={snapshot.report_url}
-              target="_blank"
-              rel="noopener noreferrer"
-              className="inline-flex items-center gap-1 text-xs text-brand hover:underline"
-            >
-              Markdown <ExternalLink className="size-3" />
-            </a>
-          </CardHeader>
-          <CardContent className="px-5">
+            {snapshot?.report_url && (
+              <a href={snapshot.report_url} target="_blank" rel="noopener noreferrer" className="ml-auto inline-flex items-center gap-1 text-brand hover:underline">
+                Markdown <ExternalLink className="size-3" />
+              </a>
+            )}
+          </div>
+        </SheetHeader>
+        <div className="px-4 py-5">
+          {outcome?.reason && <p className="mb-5 rounded-xl bg-muted/60 p-3 text-sm text-muted-foreground">{outcome.reason}</p>}
+          {report ? (
             <article className="report text-sm leading-relaxed">
               <ReactMarkdown
                 remarkPlugins={[remarkGfm, remarkMath]}
@@ -136,9 +87,11 @@ export function Details({ snapshot, report }: { snapshot: Snapshot | null; repor
                 {report}
               </ReactMarkdown>
             </article>
-          </CardContent>
-        </Card>
-      )}
-    </motion.div>
+          ) : (
+            <p className="text-sm text-muted-foreground">The report appears when Jesse finishes the investigation.</p>
+          )}
+        </div>
+      </SheetContent>
+    </Sheet>
   )
 }

@@ -70,3 +70,8 @@ export function pointOf(action: Action, frame: Frame | undefined): { x: number; 
   if (!width || !height) return null
   return { x: x / width, y: y / height }
 }
+
+/** Agent messages use light Markdown; captions show them as plain text. */
+export function plain(text: string): string {
+  return text.replace(/\*\*(.+?)\*\*/g, "$1").replace(/`([^`]+)`/g, "$1").replace(/^#+\s*/gm, "").replace(/\s+/g, " ").trim()
+}
