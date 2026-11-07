@@ -101,6 +101,8 @@ def main(argv: list[str] | None = None) -> int:
         selected = Selection("blocked", args.question, "The operator interrupted catalogue selection.")
     except PlannerUnavailable as error:
         selected = Selection("blocked", args.question, str(error))
+    except ValueError as error:
+        selected = Selection("blocked", args.question, f"Catalogue selection failed: {error}")
     except Exception as error:
         selected = Selection("blocked", args.question, f"Catalogue selection failed ({type(error).__name__}). Check credentials, model access and connection.")
     save_json(folder, "selection.json", selected.to_dict())

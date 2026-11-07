@@ -40,6 +40,8 @@ def gladia_listen(on_turn, on_partial, stopping: threading.Event) -> None:
 def voice_unavailable() -> str | None:
     if not os.environ.get("GLADIA_API_KEY", "").strip():
         return "Set GLADIA_API_KEY in .env to use the microphone."
+    if not any(os.environ.get(name, "").strip() for name in ("OPENAI_API_KEY", "OPENAI_KEY")):
+        return "Set OPENAI_API_KEY or OPENAI_KEY in .env: spoken questions go to the experiment selector."
     try:
         import sounddevice  # noqa: F401
     except OSError:
