@@ -1,6 +1,10 @@
 # Jesse
 
-Status: NetLogo desktop feasibility implementation authorized. Remaining product choices apply to later slices.
+Status: NetLogo desktop and web feasibility implementation authorized. The first live web run recorded two GUI trials; replay acceptance remains pending. Native feasibility is blocked by Screen Recording permission. Remaining product choices apply to later slices.
+
+Team constraints: three people, 24 hours until submission as of planning, with work expected to start in 8–10 hours. Plan around eight focused implementation hours.
+
+For team task allocation and milestone handoffs, read [the hackathon work plan](docs/HACKATHON_PLAN.md) and its proposed contracts. For NetLogo execution, maintain [the operating guide](src/jesse/experiments/netlogo/protocol.md) and [shared agent behavior](src/jesse/instructions.md), which the controller loads into H's prompt. Later gates and optional multi-provider review in the work plan remain proposals; the accepted single-agent MVP still applies. This file is the canonical decision record.
 
 ## Product
 
@@ -23,6 +27,12 @@ Explain substrate as the ingredient, enzyme as the processing machine, and inhib
 Choose tools by scientific fit. These are separate investigations; do not force unrelated simulators into one experimental chain. Use Python for analysis and scientific Markdown for outputs in all three scenarios.
 
 ## First implementation: NetLogo desktop feasibility
+
+The user also authorized testing NetLogo Web and comparing interaction performance with desktop. Select the surface explicitly; use the same model/protocol and record timing, step/cost metrics when available, settings and evidence. Web uses H's visual browser; desktop uses the local connection. Changing surface does not change the scientific acceptance criteria. Additional stories and models remain proposals.
+
+Core implementation now includes a bounded NetLogo rate-comparison tool and `jesse-analyze` for saved runs. It validates comparable conditions, preserves raw observations, writes separate derived artifacts and suggests checks or repeats. It does not execute follow-ups or establish saturation. The full scientific gate still requires an agreed protocol, calibrated budget, evidence verification and an observed analysis-driven follow-up. Track remaining work in the [demo readiness checklist](docs/HACKATHON_PLAN.md#demo-readiness-checklist).
+
+The second live web test exercised recording → Python analysis → report in one H session. The analysis declined comparison because the recorded rate units were unknown. Resolving the documented rate definition and units remains required; this test does not complete the full scientific gate.
 
 Create a repository-local Python environment and one entry point using the hosted H Agents API with a local desktop connection and HAI_API_KEY supplied through the environment. Use screen observations, mouse and keyboard; simulator scripting and headless execution are outside this test.
 
@@ -64,21 +74,62 @@ The public HoloDesktop CLI repository now installs the CLI distributed with the 
 
 ## Architecture
 
+Jesse has one local Python controller and one hosted H computer-use agent. Python owns session lifecycle, budgets, validated records and artifacts; H owns GUI actions and experimental decisions. Gladia is the planned speech-input adapter. Desktop and web are alternative execution surfaces for a selected experiment.
+
+Solid connections show implemented paths; dashed connections show planned capabilities. The native adapter is implemented but still awaits the required permission and interaction proof. Experiment instructions are supplied today; automatic catalogue selection is planned.
+
 ```mermaid
-flowchart TD
-    U[Researcher] -->|Voice| G[Gladia]
-    U -->|Text| B[Python controller]
-    G -->|Transcript| B
-    B -->|Instructions and tool results| H[Single H agent]
-    H -->|Tool calls and findings| B
-    H -->|Choose and operate| C[Approved desktop and online simulators]
-    C -->|Readings and screenshots| H
-    B -->|Save readings and evidence| R[Investigation files]
-    B -->|Analyze measurements| P[Python analysis]
-    P -->|Results and checks| B
-    B --> O[Scientific Markdown artifact]
-    H -.-> V[H Agent View - live and replay]
+flowchart TB
+    U["Researcher"]
+    G["Gladia transcription<br/>Planned"]
+    T["Speech output<br/>Provider to be chosen"]
+
+    subgraph LOCAL["Jesse - local Python application"]
+        C["Controller<br/>Preflight, sessions, budgets and cancellation"]
+        I["Agent context<br/>Personality and experiment protocol"]
+        R["Observation recording<br/>Validation and idempotent writes"]
+        A["Scientific analysis<br/>Predefined Python methods - planned"]
+        F[("Investigation files<br/>Settings, readings, events and metrics")]
+        O["Markdown report<br/>Outcome, limitations and evidence links"]
+    end
+
+    subgraph HAPI["H managed runtime"]
+        H["One H agent<br/>Observe, reason, act and request tools"]
+        W["Hosted visual browser<br/>NetLogo Web"]
+        V["Agent View<br/>Live observation and replay"]
+    end
+
+    D["Local desktop connection<br/>NetLogo Desktop - permission required"]
+
+    U -->|"Start text-driven run"| C
+    U -.->|"Speak a question or correction"| G
+    G -.->|"Deliver final transcript"| C
+    I -->|"Supply behavior and protocol"| C
+    C -->|"Start session and return tool results"| H
+    H -->|"Stream events and request observation writes"| C
+    H -->|"Operate visible controls"| W
+    W -->|"Return screen observations"| H
+    H -->|"Operate mouse and keyboard"| D
+    D -->|"Return screenshots"| H
+    C -->|"Record raw readings"| R
+    R -->|"Persist validated observations"| F
+    C -->|"Persist session events and metrics"| F
+    C -.->|"Submit comparable measurements"| A
+    A -.->|"Return results for H to choose a follow-up"| C
+    C -->|"Write outcome and verification status"| O
+    F -->|"Supply traceable evidence"| O
+    H -->|"Expose session events"| V
+    U -->|"Watch live or replay"| V
+    O -->|"Present findings for review"| U
+    C -.->|"Send brief progress updates"| T
+    T -.->|"Speak updates"| U
 ```
+
+Extensibility lives in experiment definitions: supported question, application/model, interaction surface, operating protocol, measurement rules, assumptions, analyzer and completion criteria. A new NetLogo model reuses the runtime and surface adapters; another application may require an additional adapter and always needs its own interaction proof. Traffic Grid, Fire and the ChemCollective coolant activity are proposed stories, not implemented catalogue entries.
+
+The scientific loop is plan → measure → analyze → verify or adapt → report. The current feasibility runner covers GUI execution, recording, a bounded Python rate comparison and a preliminary report; full scientific inference and autonomous follow-up remain planned. A completed API turn is separate from a supported scientific conclusion. Outputs may be supported, inconclusive or blocked; current runs remain inconclusive pending evidence review, or blocked when a required capability is missing.
+
+Keep one desktop operator and one custom-tool executor. Additional agent providers or a read-only reviewer remain optional future extensions. Agent View observes execution; it does not replace the controller or execute custom tools.
 
 ## Application catalogue and investigation records
 
@@ -131,6 +182,8 @@ Build each slice end to end through its entry point, domain behavior, required i
 ## Agent working instructions
 
 Fetch current API documentation before library or service integration. Use Context7 resolution and queries when relevant documentation is indexed; otherwise consult official documentation.
+
+The user authorizes regular GitHub synchronization. Commit and push tested, runnable checkpoints, report the branch and commit, and retain credentials and ignored run artifacts locally.
 
 Use this file as the canonical project decision record, including its architecture diagram. AGENTS.md is the entry-point pointer to this document.
 
