@@ -103,6 +103,10 @@ Native preflight found `/Applications/NetLogo 7.0.4/NetLogo 7.0.4.app` and passe
 
 The second live web run (`20261107T122354074237Z`) took about 101 seconds. H recorded both trials, called the Python analyzer and included its result in the report. The analyzer returned `not_comparable` because the recorded units were unknown. This verifies the live tool path, not the scientific comparison. Confirm the documented rate definition and units before the full experiment.
 
+The question-driven path was then exercised through OpenAI selection, H execution and analysis. One run exposed malformed settings arguments; the tool now takes scalar control values and Python assembles the observation. The corrected run (`20261107T130453990066Z`) saved both readings. Its unspecified unit label is rejected by the tightened analyzer. Original observations remain unchanged.
+
+The [measurement definition](src/jesse/experiments/netlogo/measurement.md) now documents the model's V proxy, source-derived units and timing convention. New runs receive that definition. The analyzer still rejects unknown or unspecified unit labels. Source inspection supplies assumptions, not experimental readings or scientific verification.
+
 Run automated checks with:
 
 ```sh

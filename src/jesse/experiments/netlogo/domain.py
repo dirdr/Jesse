@@ -21,6 +21,7 @@ def build_prompt(surface: str = "desktop", application: str | None = None, quest
     (
         launch,
         files("jesse").joinpath("instructions.md").read_text(encoding="utf-8"),
+        files(__package__).joinpath("measurement.md").read_text(encoding="utf-8"),
         files(__package__).joinpath("protocol.md").read_text(encoding="utf-8"),
     )
     )

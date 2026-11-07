@@ -40,6 +40,7 @@ class RateAnalysisTests(unittest.TestCase):
             replace(high, settings=high.settings | {"Kr": 20}),
             replace(high, interval={"start": 0, "end": 60, "unit": "ticks"}),
             replace(high, unit=None), replace(high, unit="different units"),
+            replace(high, unit="Velocity (model units, unspecified)"),
             replace(high, quantity="temperature"),
             replace(high, settings=high.settings | {"PAUSE?": False}),
         ):
@@ -54,6 +55,13 @@ class RateAnalysisTests(unittest.TestCase):
         self.assertEqual(result["status"], "insufficient_data")
         self.assertEqual(result["excluded_observations"][0]["observation_id"], "unknown")
         self.assertEqual(result["included_observation_ids"], ["low"])
+
+    def test_matching_unknown_unit_labels_do_not_bypass_unit_validation(self):
+        for unit in ("unknown", "Velocity (model units, unspecified)", "units not displayed"):
+            with self.subTest(unit=unit):
+                result = compare_rates([reading(unit=unit), reading("high", 100, 3, unit=unit)])
+                self.assertEqual(result["status"], "not_comparable")
+                self.assertTrue(any("units are unknown" in issue for issue in result["issues"]))
 
     def test_multiple_readings_from_one_trial_are_not_independent_repeats(self):
         duplicate_trial = reading("second-reading", trial_id="low")

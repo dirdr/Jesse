@@ -10,7 +10,7 @@ from jesse.recording.domain import Observation
 
 def compare_rates(observations: list[Observation]) -> dict:
     ordered = sorted(observations, key=lambda item: item.observation_id)
-    method = "netlogo-enzyme-rate-comparison-v1"
+    method = "netlogo-enzyme-rate-comparison-v2"
     fingerprint = json.dumps({"method": method, "observations": [item.to_dict() for item in ordered]}, sort_keys=True, allow_nan=False)
     analysis_id = "rates-" + hashlib.sha256(fingerprint.encode()).hexdigest()[:16]
     included = [item for item in ordered if item.status == "observed"]
@@ -25,6 +25,7 @@ def compare_rates(observations: list[Observation]) -> dict:
         "comparison": None, "suggested_follow_up": None,
         "limitations": [
             "Readings and evidence still require replay verification.",
+            "V is the model's free-substrate depletion proxy, including binding; it is not a direct product-formation rate. The final calculation precedes tick increment.",
             "This comparison does not establish saturation, statistical significance or a physical laboratory result.",
         ],
     }
@@ -52,7 +53,7 @@ def compare_rates(observations: list[Observation]) -> dict:
             issues.append(prefix + "The bounded assay requires PAUSE? enabled.")
         if item.interval != {"start": 0, "end": 30, "unit": "ticks"}:
             issues.append(prefix + "The RECORD V assay requires the same observed 0–30 tick interval.")
-        if not item.unit:
+        if not item.unit or any(marker in item.unit.casefold() for marker in ("unknown", "unspecified", "not displayed", "not shown", "unlabeled", "unlabelled")):
             issues.append(prefix + "Rate units are unknown; confirm the displayed simulator units.")
         if (item.unit, item.quantity) != (baseline.unit, baseline.quantity):
             issues.append(prefix + "Quantity labels or units differ between readings.")

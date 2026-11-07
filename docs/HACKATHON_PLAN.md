@@ -128,6 +128,8 @@ The demo should show a question becoming an experiment, a checked comparison, a 
 - [x] Save derived analysis separately and recommend checks or independent repeats.
 - [x] H calls the analyzer during a live web run and reports its validation result. The second live run returned `not_comparable` because rate units were unknown.
 - [x] Register the first protocol, accept a research question, and validate the proposed protocol and available surface. Both OpenAI and H selection backends have passed live routing checks; H also blocked an unsupported coolant request.
+- [x] Exercise question → OpenAI selection → H GUI trials → persisted observations → Python analysis → report. Harden the observation tool after a live argument-format failure.
+- [x] Document the source-derived definition and units of V for model version 7.0.4. V includes substrate binding; fresh GUI readings and replay still need verification under that documented protocol.
 
 ### Required for a convincing experiment
 

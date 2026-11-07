@@ -32,6 +32,8 @@ The user also authorized testing NetLogo Web and comparing interaction performan
 
 Core implementation now includes a bounded NetLogo rate-comparison tool and `jesse-analyze` for saved runs. It validates comparable conditions, preserves raw observations, writes separate derived artifacts and suggests checks or repeats. It does not execute follow-ups or establish saturation. The full scientific gate still requires an agreed protocol, calibrated budget, evidence verification and an observed analysis-driven follow-up. Track remaining work in the [demo readiness checklist](docs/HACKATHON_PLAN.md#demo-readiness-checklist).
 
+The linked model version 7.0.4 has now been inspected to define the displayed V: it is a free-substrate depletion proxy, includes substrate binding and is calculated before tick increment. Its source-derived units are substrate molecules/model tick. Supply the [measurement definition](src/jesse/experiments/netlogo/measurement.md) with the protocol; do not describe V as a direct instantaneous product-formation rate. Existing raw observations retain their original unit labels and verification status.
+
 The second live web test exercised recording → Python analysis → report in one H session. The analysis declined comparison because the recorded rate units were unknown. Resolving the documented rate definition and units remains required; this test does not complete the full scientific gate.
 
 Create a repository-local Python environment and one entry point using the hosted H Agents API with a local desktop connection and HAI_API_KEY supplied through the environment. Use screen observations, mouse and keyboard; simulator scripting and headless execution are outside this test.
