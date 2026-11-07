@@ -6,14 +6,6 @@ import { cn } from "@/lib/utils"
 import { actionStyle, describe, plain, pointOf } from "@/lib/actions"
 import { api, type Action, type Frame } from "@/lib/api"
 
-function clock(iso: string | null | undefined) {
-  if (!iso) return ""
-  try {
-    return new Date(iso).toLocaleTimeString([], { hour: "2-digit", minute: "2-digit", second: "2-digit" })
-  } catch {
-    return ""
-  }
-}
 
 interface LiveScreenProps {
   runId: string
@@ -28,7 +20,6 @@ interface LiveScreenProps {
 export function LiveScreen({ runId, frames, actions, active, replay, pinned, onPin }: LiveScreenProps) {
   const latest = frames.length - 1
   const shown = pinned ?? latest
-  const frame = shown >= 0 ? frames[shown] : undefined
   const following = pinned === null
   const [loaded, setLoaded] = useState<Set<number>>(() => new Set())
 
@@ -73,10 +64,8 @@ export function LiveScreen({ runId, frames, actions, active, replay, pinned, onP
             ) : (
               <span className="rounded-full bg-white/10 px-2 py-0.5 font-medium text-zinc-300">Paused view</span>
             )}
-            <span className="hidden sm:inline">Agent screen</span>
           </div>
           <div className="flex items-center gap-3 font-mono tabular-nums">
-            {frame && <span>{clock(frame.at)}</span>}
             {frames.length > 0 && (
               <span>
                 {shown + 1}/{frames.length}

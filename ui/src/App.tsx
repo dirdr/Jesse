@@ -42,7 +42,6 @@ export default function App() {
       <div className="flex min-h-full flex-col">
         <Header
           snapshot={snapshot}
-          live={live}
           hasRun={hasRun}
           replay={run.replay}
           voiceOn={run.voiceOn}
@@ -72,7 +71,7 @@ export default function App() {
               {finished && snapshot?.outcome ? (
                 <div className="flex flex-wrap items-center gap-3 rounded-2xl border border-border/70 bg-card/70 px-4 py-3 backdrop-blur">
                   <OutcomeBadge outcome={snapshot.outcome.outcome} />
-                  <p className="min-w-0 flex-1 text-sm text-muted-foreground">{snapshot.outcome.reason}</p>
+                  <span className="flex-1" />
                   {run.report && (
                     <button type="button" onClick={() => setReportOpen(true)} className="text-sm font-medium text-brand hover:underline">
                       Read the report

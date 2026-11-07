@@ -2,18 +2,10 @@ import { useEffect, useMemo, useRef } from "react"
 import { motion } from "motion/react"
 import { CheckCircle2, Circle, FlaskConical, Loader2, User } from "lucide-react"
 import { cn } from "@/lib/utils"
-import { actionStyle, describe, plain } from "@/lib/actions"
+import { actionStyle, describe } from "@/lib/actions"
 import { KINDS, TONE_CLASS } from "@/lib/kinds"
 import type { Action, ConversationEvent, Measurement, PlanGoal } from "@/lib/api"
 
-function clock(iso: string | null | undefined) {
-  if (!iso) return ""
-  try {
-    return new Date(iso).toLocaleTimeString([], { hour: "2-digit", minute: "2-digit", second: "2-digit" })
-  } catch {
-    return ""
-  }
-}
 
 export function Panel({ title, aside, children, className }: { title: string; aside?: React.ReactNode; children: React.ReactNode; className?: string }) {
   return (
@@ -89,7 +81,6 @@ export function MeasurementsPanel({ measurements }: { measurements: Measurement[
             >
               <div className="flex items-baseline justify-between gap-2">
                 <span className="font-mono text-xs font-medium">{row.id}</span>
-                <span className="font-mono text-[11px] text-muted-foreground">{clock(row.at)}</span>
               </div>
               {row.result && <div className="mt-1 text-lg font-semibold tracking-tight tabular-nums">{row.result}</div>}
               <div className="mt-2 flex flex-wrap gap-1.5">
@@ -165,9 +156,7 @@ export function ActivityPanel({
                   })()}
                   <span className="min-w-0 flex-1">
                     <span className="block truncate text-[13px] font-medium">{describe(item.action)}</span>
-                    {item.action.text && <span className="line-clamp-2 text-xs text-muted-foreground">{plain(item.action.text)}</span>}
                   </span>
-                  <span className="shrink-0 pt-0.5 font-mono text-[10px] text-muted-foreground tabular-nums">{clock(item.at)}</span>
                 </button>
               </li>
             ) : (
@@ -198,7 +187,6 @@ function EventCard({ event }: { event: ConversationEvent }) {
         {!researcher && kind && (
           <span className={cn("rounded-full px-1.5 py-px text-[10px] font-medium ring-1 ring-inset", TONE_CLASS[kind.tone])}>{kind.label}</span>
         )}
-        <span className="ml-auto font-mono text-[10px] text-muted-foreground">{clock(event.at)}</span>
       </div>
       <p className="whitespace-pre-wrap">{event.text}</p>
     </div>

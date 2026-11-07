@@ -2,18 +2,17 @@ import { useState } from "react"
 import { motion } from "motion/react"
 import { ArrowRight, FlaskConical, Loader2, Thermometer } from "lucide-react"
 import { Button } from "@/components/ui/button"
+import { Logo } from "@/components/logo"
 
 const EXPERIMENTS = [
   {
     question: "Can this coolant absorb more heat than the reference coolant?",
     tool: "ChemCollective",
-    detail: "Mixing calorimetry against ethylene glycol, 2.200 J/(g·°C)",
     icon: Thermometer,
   },
   {
     question: "Does adding more substrate make an enzyme reaction faster?",
     tool: "NetLogo Enzyme Kinetics",
-    detail: "Reaction velocity at different substrate volumes, constants fixed",
     icon: FlaskConical,
   },
 ]
@@ -27,13 +26,10 @@ export function Launcher({ busy, onStart }: { busy: boolean; onStart: (question:
   return (
     <div className="mx-auto flex w-full max-w-3xl flex-1 flex-col justify-center py-10">
       <motion.div initial={{ opacity: 0.4, y: 8 }} animate={{ opacity: 1, y: 0 }} transition={{ duration: 0.5 }}>
-        <h1 className="text-gradient text-4xl font-semibold tracking-tight text-balance sm:text-5xl">
-          Run an experiment. Watch it happen.
+        <h1>
+          <Logo size="lg" />
         </h1>
-        <p className="mt-4 max-w-2xl text-base text-pretty text-muted-foreground">
-          Jesse picks an approved simulator, operates it on screen like a lab technician, checks the measurements in
-          Python and reports what the evidence supports.
-        </p>
+        <p className="mt-5 text-lg text-muted-foreground">Ask a question. Watch the experiment run.</p>
       </motion.div>
 
       <form
@@ -62,7 +58,7 @@ export function Launcher({ busy, onStart }: { busy: boolean; onStart: (question:
       </form>
 
       <div className="mt-6 grid gap-3 sm:grid-cols-2">
-        {EXPERIMENTS.map(({ question: example, tool, detail, icon: Icon }) => (
+        {EXPERIMENTS.map(({ question: example, tool, icon: Icon }) => (
           <button
             key={example}
             type="button"
@@ -75,7 +71,6 @@ export function Launcher({ busy, onStart }: { busy: boolean; onStart: (question:
             <span className="flex min-w-0 flex-col gap-1">
               <span className="text-xs font-medium text-muted-foreground">{tool}</span>
               <span className="text-sm leading-snug font-medium">{example}</span>
-              <span className="text-xs text-muted-foreground">{detail}</span>
             </span>
           </button>
         ))}
