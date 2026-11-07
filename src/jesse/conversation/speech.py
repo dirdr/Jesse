@@ -18,7 +18,9 @@ INSTRUCTIONS = (
     "Say every number and unit clearly. Speak in the language of the text with a natural native accent."
 )
 TRANSLATE = (
-    "Turn this lab status into a terse spoken update of at most 8 words, in the language of the researcher's question. "
+    "Turn this lab status into a terse spoken update of at most 8 words, written entirely in fluent natural "
+    "language of the researcher's question (translate every word, e.g. stockroom, workbench, water, button). "
+    "Only proper names of chemicals or assignments, like Compound Y or Coolant I, stay unchanged. "
     "Keep every number, unit, setting and trial name exactly. Use only facts and names present in the status; never "
     "invent identifiers. For an experiment choice, just name the simulator and what is compared. No filler, no greeting, "
     "no restating the question, no explanation, no opinion. Reply with the update only."
@@ -67,7 +69,7 @@ def _translate(text: str, question: str) -> str:
     response = httpx.post(CHAT_URL, timeout=30, headers={"Authorization": f"Bearer {openai_key()}"},
         json={"model": os.environ.get("OPENAI_MODEL") or "gpt-5-mini", "reasoning_effort": "minimal", "messages": [
             {"role": "system", "content": TRANSLATE},
-            {"role": "user", "content": f"Researcher question:\n{question}\n\nAnnouncement:\n{text}"}]})
+            {"role": "user", "content": f"Researcher question (reply in its language):\n{question}\n\nLab status:\n{text}"}]})
     response.raise_for_status()
     return response.json()["choices"][0]["message"]["content"].strip() or text
 
@@ -99,6 +101,20 @@ def cached_step_speech(folder: Path, index: int, synthesize=None, translate=None
         return None
     text = f"Step {index + 1}/{len(plan)}: {plan[index]['title']}"
     key = "step-" + hashlib.sha256(text.encode()).hexdigest()[:16]
+    return _spoken(folder, key, text, synthesize, translate)
+
+
+def cached_action_speech(folder: Path, index: int, synthesize=None, translate=None) -> Path | None:
+    """Return the mp3 for one agent action: what the agent says it is doing, condensed."""
+    from .live import live_state
+
+    actions = live_state(folder)["actions"]
+    if not 0 <= index < len(actions):
+        return None
+    action = actions[index]
+    args = action.get("args") or {}
+    text = action.get("text") or " ".join(str(part) for part in (action["tool"], args.get("element") or args.get("text") or "") if part)
+    key = "action-" + hashlib.sha256(f"{index}:{text}".encode()).hexdigest()[:16]
     return _spoken(folder, key, text, synthesize, translate)
 
 

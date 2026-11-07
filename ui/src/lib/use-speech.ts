@@ -1,8 +1,15 @@
 import { useCallback, useEffect, useRef, useState } from "react"
 import { toast } from "sonner"
-import { api, type ConversationEvent, type PlanGoal } from "@/lib/api"
+import { api, type Action, type ConversationEvent, type PlanGoal } from "@/lib/api"
 
 const KEY = "jesse-speech"
+/** Between announcements, narrate the agent's latest action at most this often. */
+const NARRATION_GAP_MS = 6000
+const SILENT_TOOLS = /^(message|wait|zoom|screenshot|update_plan|record_|analyze_|answer)/
+
+function latestNarratable(actions: Action[] | undefined): Action | undefined {
+  return [...(actions ?? [])].reverse().find((action) => !SILENT_TOOLS.test(action.tool) && action.text)
+}
 
 function readOn(): boolean {
   try {
@@ -21,6 +28,8 @@ export function useSpeech(
   runId: string | null,
   events: ConversationEvent[] | undefined,
   plan: PlanGoal[] | undefined,
+  actions: Action[] | undefined,
+  active: boolean,
   fresh: boolean,
   replay: boolean,
 ) {
@@ -42,14 +51,27 @@ export function useSpeech(
   }, [])
 
   const blocked = useRef(false)
+  const lastEnded = useRef(0)
+  const narrated = useRef(-1)
+  const narration = useRef<{ runId: string; action: Action | undefined; enabled: boolean } | null>(null)
 
   const next = useCallback(() => {
-    if (playing.current || blocked.current || !queue.current.length) return
+    if (playing.current || blocked.current) return
+    if (!queue.current.length) {
+      // Nothing scheduled: say what the agent is doing now, skipping actions that happened in between.
+      const current = narration.current
+      const action = current?.action
+      if (!current?.enabled || !action || action.index <= narrated.current) return
+      if (Date.now() - lastEnded.current < NARRATION_GAP_MS) return
+      narrated.current = action.index
+      queue.current.push(api.actionSpeechUrl(current.runId, action.index))
+    }
     const url = queue.current.shift()!
     const audio = new Audio(url)
     playing.current = audio
     const done = () => {
       if (playing.current === audio) playing.current = null
+      lastEnded.current = Date.now()
       next()
     }
     audio.onended = done
@@ -76,8 +98,23 @@ export function useSpeech(
 
   useEffect(() => {
     heard.current = null
+    narrated.current = -1
     silence()
   }, [runId, silence])
+
+  useEffect(() => {
+    narration.current = runId
+      ? { runId, action: latestNarratable(actions), enabled: on && available && active && !replay }
+      : null
+    next()
+  }, [runId, actions, on, available, active, replay, next])
+
+  // Narration also needs a clock: the gap can elapse between polls.
+  useEffect(() => {
+    if (!runId || !active || replay) return
+    const timer = window.setInterval(next, 1000)
+    return () => window.clearInterval(timer)
+  }, [runId, active, replay, next])
 
   useEffect(() => {
     if (!runId || !events) return

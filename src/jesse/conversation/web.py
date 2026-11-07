@@ -13,7 +13,7 @@ from typing import Literal
 
 from .application import RunManager
 from .live import cached_frame, live_state
-from .speech import cached_speech, cached_step_speech, speech_available
+from .speech import cached_action_speech, cached_speech, cached_step_speech, speech_available
 from .voice import VoiceListener
 
 
@@ -133,18 +133,19 @@ def create_app(manager: RunManager | None = None, voice: VoiceListener | None = 
     def speech_state():
         return {"available": speech_available()}
 
-    @app.get("/api/runs/{run_id}/speech/steps/{index}")
-    def step_speech(run_id: str, index: int):
+    @app.get("/api/runs/{run_id}/speech/{kind}/{index}")
+    def indexed_speech(run_id: str, kind: Literal["steps", "actions"], index: int):
         if not speech_available():
             raise HTTPException(409, "Set OPENAI_API_KEY or OPENAI_KEY to hear Jesse.")
+        speak = cached_step_speech if kind == "steps" else cached_action_speech
         try:
-            path = cached_step_speech(manager.folder(run_id), index)
+            path = speak(manager.folder(run_id), index)
         except (ValueError, FileNotFoundError):
             raise HTTPException(404, "Investigation not found.") from None
         except Exception:
             raise HTTPException(502, "Jesse's voice could not be generated.") from None
         if path is None:
-            raise HTTPException(404, "No such step.")
+            raise HTTPException(404, "Nothing to say for this item.")
         return FileResponse(path, media_type="audio/mpeg")
 
     @app.get("/api/runs/{run_id}/speech/{event_id}")

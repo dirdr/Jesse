@@ -138,6 +138,7 @@ export const api = {
   speechAvailable: () => request<{ available: boolean }>("/api/speech"),
   speechUrl: (id: string, eventId: string) => `/api/runs/${id}/speech/${eventId}`,
   stepSpeechUrl: (id: string, index: number) => `/api/runs/${id}/speech/steps/${index}`,
+  actionSpeechUrl: (id: string, index: number) => `/api/runs/${id}/speech/actions/${index}`,
   voice: () => request<VoiceState>("/api/voice"),
   voiceStart: () => request<VoiceState>("/api/voice/start", { method: "POST" }),
   voiceStop: () => request<VoiceState>("/api/voice/stop", { method: "POST" }),

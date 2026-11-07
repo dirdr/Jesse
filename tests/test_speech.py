@@ -4,7 +4,7 @@ from pathlib import Path
 import tempfile
 import unittest
 
-from jesse.conversation.speech import cached_speech, cached_step_speech
+from jesse.conversation.speech import cached_action_speech, cached_speech, cached_step_speech
 
 
 class SpeechTests(unittest.TestCase):
@@ -58,6 +58,17 @@ class StepSpeechTests(unittest.TestCase):
             self.assertTrue(path.exists())
             self.assertEqual(calls, ["Step 2/2: Trial 1: VOLUME 50"])
             self.assertIsNone(cached_step_speech(folder, 5, lambda text: b"", lambda text, question: text))
+
+    def test_agent_action_is_announced_from_its_public_text(self):
+        with tempfile.TemporaryDirectory() as directory:
+            folder = Path(directory)
+            click = {"tool_name": "click_web", "args": {"x": 0.5, "y": 0.5, "element": "Load arrow"}}
+            (folder / "events.jsonl").write_text(json.dumps({"type": "AgentEvent", "timestamp": "t", "data": {
+                "kind": "policy_event", "content": "Loading the Coolant I assignment.", "reasoning_content": "private",
+                "tool_reqs": [click]}}) + "\n", encoding="utf-8")
+            calls = []
+            cached_action_speech(folder, 0, lambda text: calls.append(text) or b"mp3", lambda text, question: text)
+            self.assertEqual(calls, ["Loading the Coolant I assignment."])
 
 
 if __name__ == "__main__":
