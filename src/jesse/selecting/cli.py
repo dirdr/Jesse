@@ -98,7 +98,7 @@ def main(argv: list[str] | None = None) -> int:
         selected = Selection("blocked", args.question, f"Catalogue selection failed ({type(error).__name__}). Check credentials, model access and connection.")
     save_json(folder, "selection.json", selected.to_dict())
     save_json(folder, "planning-metrics.json", {"elapsed_seconds": round(time.monotonic() - started, 3), "usage": planner.usage})
-    print(json.dumps(selected.to_dict(), indent=2), flush=True)
+    print(json.dumps(selected.to_dict(), indent=2, ensure_ascii=False), flush=True)
     if selected.status == "blocked" or args.plan_only:
         save_selection_report(folder, selected, args.plan_only)
         return 1 if selected.status == "blocked" else 0

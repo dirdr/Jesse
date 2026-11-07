@@ -60,7 +60,7 @@ Operate the selected approved simulator through its browser or native desktop in
 
 Use hosted H sessions and retain agent_view_url for live viewing and replay in H Agent View. Keep one backend executor for custom tools; additional observers remain read-only. The backend must remain running while tool execution is needed.
 
-Gladia supplies voice transcription. The voice preview streams microphone audio to Gladia, groups final utterances into silence-delimited researcher turns, and prints requests without sending them to H. It does not yet maintain a conversation with H. Spoken responses require a separate speech-output implementation. Devin and Linkup are outside the MVP.
+Gladia supplies voice transcription. The voice preview streams microphone audio to Gladia and groups final utterances into researcher turns. Its optional preparation mode uses PydanticAI to preview enriched computer-use requests without restricting them to the catalogue or sending them to H; suggestions and tool availability remain unverified. Its separate plan-only mode routes each turn through the existing catalogue selector. It does not yet maintain a conversation with H or apply spoken corrections to an active investigation. Spoken responses require a separate speech-output implementation. Devin and Linkup are outside the MVP.
 
 ## H harness and extension boundaries
 
@@ -83,7 +83,7 @@ Solid connections show implemented paths; dashed connections show planned capabi
 ```mermaid
 flowchart TB
     U["Researcher"]
-    G["Gladia transcription<br/>Planned"]
+    G["Gladia transcription<br/>Live preview"]
     T["Speech output<br/>Provider to be chosen"]
 
     subgraph LOCAL["Jesse - local Python application"]
@@ -109,8 +109,9 @@ flowchart TB
     C -->|"Submit question and available surfaces"| P
     K -->|"Describe supported protocols"| P
     P -->|"Return proposal for Python validation"| C
-    U -.->|"Speak a question or correction"| G
-    G -.->|"Deliver final transcript"| C
+    U -->|"Speak a question"| G
+    G -->|"Final turn: optional plan-only selection"| P
+    G -.->|"Future active-run correction"| C
     I -->|"Supply behavior and protocol"| C
     C -->|"Start session and return tool results"| H
     H -->|"Stream events and request observation writes"| C

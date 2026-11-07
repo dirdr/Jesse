@@ -108,6 +108,7 @@ class LiveVoiceTests(unittest.TestCase):
 
         self.assertEqual(client.options.model, "solaria-1")
         self.assertEqual(client.options.encoding, "wav/pcm")
+        self.assertIsNone(client.options.language_config)
         self.assertTrue(client.options.messages_config.receive_partial_transcripts)
         self.assertTrue(client.options.messages_config.receive_speech_events)
         self.assertEqual(client.options.endpointing, 0.3)
@@ -126,6 +127,33 @@ class LiveVoiceTests(unittest.TestCase):
                       "(the transcript may contain recognition errors):\n\n"
                       "Compare the rates. Repeat the first trial. Final words.", text)
         self.assertIn("Final words.", text)
+
+    def test_selected_input_device_is_used_by_microphone_stream(self):
+        streams = []
+
+        def make_stream(**options):
+            stream = FakeStream(**options)
+            streams.append(stream)
+            return stream
+
+        with contextlib.redirect_stdout(io.StringIO()):
+            run_live_preview(FakeClient(FakeSession()), make_stream, input_device=7)
+        self.assertEqual(streams[0].options["device"], 7)
+
+    def test_list_inputs_requires_no_credentials_and_excludes_output_devices(self):
+        sounddevice = types.SimpleNamespace(
+            query_devices=lambda: [
+                {"name": "speakers", "max_input_channels": 0},
+                {"name": "microphone", "max_input_channels": 1},
+            ],
+            PortAudioError=type("PortAudioError", (Exception,), {}),
+        )
+        with patch.dict(os.environ, {}, clear=True):
+            with patch.dict(sys.modules, {"sounddevice": sounddevice}):
+                with contextlib.redirect_stdout(io.StringIO()) as output:
+                    self.assertEqual(main(["--list-inputs"]), 0)
+        self.assertIn("1: microphone", output.getvalue())
+        self.assertNotIn("speakers", output.getvalue())
 
     def test_custom_turn_callback_receives_raw_transcript_after_finalization(self):
         session = FakeSession()
@@ -185,6 +213,49 @@ class LiveVoiceTests(unittest.TestCase):
         with patch("jesse.voice.live.time.monotonic", side_effect=lambda: clock[0]):
             with contextlib.redirect_stdout(io.StringIO()):
                 run_live_preview(FakeClient(session), ClockedStream, on_turn=received.append)
+
+    def test_long_speech_waits_for_speech_end_and_final_transcript(self):
+        session = FakeSession()
+        clock = [0.0]
+        delivered = []
+        sends = [0]
+
+        def send_audio(audio):
+            sends[0] += 1
+            if sends[0] == 1:
+                session.handlers["message"](types.SimpleNamespace(type="speech_start"))
+                session.handlers["message"](transcript("Partial", False))
+            elif sends[0] == 3:
+                session.handlers["message"](transcript("Complete request.", True))
+                session.handlers["message"](types.SimpleNamespace(type="speech_end"))
+
+        session.send_audio = send_audio
+        session.stop_recording = lambda: session.handlers["ended"](
+            types.SimpleNamespace(code=1000, reason=None))
+
+        class Stream(FakeStream):
+            def read(self, frames):
+                self.reads += 1
+                if self.reads == 2:
+                    clock[0] = 5.0
+                elif self.reads == 3:
+                    self_test.assertEqual(delivered, [])
+                    self_test.assertFalse(session.closed)
+                    clock[0] = 10.0
+                elif self.reads == 4:
+                    self_test.assertEqual(delivered, [])
+                    clock[0] = 11.5
+                elif self.reads == 5:
+                    self_test.assertEqual(delivered, ["Complete request."])
+                    raise KeyboardInterrupt
+                return b"\x00\x00", False
+
+        self_test = self
+        with patch("jesse.voice.live.time.monotonic", side_effect=lambda: clock[0]):
+            with contextlib.redirect_stdout(io.StringIO()):
+                run_live_preview(FakeClient(session), Stream, on_turn=delivered.append)
+        self.assertEqual(delivered, ["Complete request."])
+        self.assertTrue(session.closed)
 
     def test_incomplete_partial_on_stop_is_reported_without_emitting_turn(self):
         session = FakeSession()
@@ -255,7 +326,7 @@ class LiveVoiceTests(unittest.TestCase):
         class DeviceError(Exception):
             pass
 
-        def query_devices(*, kind):
+        def query_devices(device=None, *, kind):
             raise DeviceError("no input device")
 
         sounddevice = types.SimpleNamespace(

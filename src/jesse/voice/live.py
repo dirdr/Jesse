@@ -16,6 +16,7 @@ from gladiaio_sdk import (
 )
 
 from .prompt import build_spoken_request
+from .planning import VoicePlanningQueue
 from .turns import TurnAssembler
 
 SAMPLE_RATE = 16000
@@ -45,6 +46,7 @@ def run_live_preview(
     on_turn: Callable[[str], None] = print_turn,
     on_partial: Callable[[str], None] = print_partial,
     silence_seconds: float = TURN_SILENCE,
+    input_device: int | None = None,
 ) -> None:
     turns = TurnAssembler(silence_seconds)
     session = client.live().start_session(
@@ -113,9 +115,13 @@ def run_live_preview(
             reason = errors[0] if errors else "unexpected closure"
             raise RuntimeError(f"Gladia live session ended: {reason}")
 
-        with stream_factory(
-            samplerate=SAMPLE_RATE, channels=1, dtype="int16", blocksize=BLOCK_SIZE
-        ) as stream:
+        stream_options = {
+            "samplerate": SAMPLE_RATE, "channels": 1,
+            "dtype": "int16", "blocksize": BLOCK_SIZE,
+        }
+        if input_device is not None:
+            stream_options["device"] = input_device
+        with stream_factory(**stream_options) as stream:
             print("Listening. Speak naturally; press Ctrl+C to stop.", flush=True)
             try:
                 while not ended.is_set():
@@ -153,13 +159,34 @@ def main(argv: list[str] | None = None) -> int:
         "--silence-seconds", type=float, default=TURN_SILENCE,
         help="seconds without speech before completing a turn (default: 1.5)",
     )
+    modes = parser.add_mutually_exclusive_group()
+    modes.add_argument(
+        "--plan", action="store_true",
+        help="route each completed turn through the Pydantic AI planner without starting H",
+    )
+    modes.add_argument(
+        "--prepare", action="store_true",
+        help="enrich each completed turn for an H prompt preview without starting H",
+    )
+    parser.add_argument(
+        "--surface", choices=("auto", "web", "desktop"), default="auto",
+        help="surface preference for voice planning (default: auto)",
+    )
+    parser.add_argument("--planner-model", help="OpenAI model for voice planning")
+    parser.add_argument("--list-inputs", action="store_true", help="list microphone devices and exit")
+    parser.add_argument("--input-device", type=int, metavar="INDEX", help="microphone device index")
     args = parser.parse_args(argv)
     try:
         TurnAssembler(args.silence_seconds)
     except ValueError as error:
         parser.error(str(error))
-    if not os.environ.get("GLADIA_API_KEY"):
+    if not args.list_inputs and not os.environ.get("GLADIA_API_KEY", "").strip():
         print("Blocked: set GLADIA_API_KEY in the environment.", file=sys.stderr)
+        return 1
+    if not args.list_inputs and (args.plan or args.prepare) and not any(
+        os.environ.get(name, "").strip() for name in ("OPENAI_API_KEY", "OPENAI_KEY")
+    ):
+        print("Blocked: set OPENAI_API_KEY or OPENAI_KEY for voice planning.", file=sys.stderr)
         return 1
     try:
         import sounddevice
@@ -167,11 +194,52 @@ def main(argv: list[str] | None = None) -> int:
         print(f"Voice preview failed: {error}", file=sys.stderr)
         return 1
     try:
-        sounddevice.query_devices(kind="input")
+        if args.list_inputs:
+            for index, device in enumerate(sounddevice.query_devices()):
+                if device["max_input_channels"] > 0:
+                    print(f'{index}: {device["name"]} ({device["max_input_channels"]} input channels)')
+            return 0
+        device = sounddevice.query_devices(args.input_device, kind="input")
+        print(f'Microphone: {device["name"]}', flush=True)
         print("Audio is streamed to Gladia. No message is sent to H.", flush=True)
-        run_live_preview(
-            GladiaClient(), sounddevice.RawInputStream, silence_seconds=args.silence_seconds
-        )
+        if args.plan or args.prepare:
+            from jesse.selecting.cli import main as select_question
+
+            def plan(transcript: str) -> int:
+                if args.prepare:
+                    from .preparation import PydanticRequestPreparer, print_prepared_request
+
+                    model = args.planner_model or os.environ.get("OPENAI_MODEL", "gpt-5-mini")
+                    result = PydanticRequestPreparer(model).prepare(transcript)
+                    print_prepared_request(transcript, result)
+                    return 0
+                options = ["--plan-only", "--surface", args.surface]
+                if args.planner_model:
+                    options.extend(["--planner-model", args.planner_model])
+                options.extend(["--", transcript])
+                return select_question(options)
+
+            planning = VoicePlanningQueue(plan)
+
+            def submit_turn(transcript: str) -> None:
+                print_turn(transcript)
+                planning.submit(transcript)
+
+            try:
+                run_live_preview(
+                    GladiaClient(), sounddevice.RawInputStream,
+                    on_turn=submit_turn, silence_seconds=args.silence_seconds,
+                    input_device=args.input_device,
+                )
+            finally:
+                planning_ok = planning.close()
+            if not planning_ok:
+                return 1
+        else:
+            run_live_preview(
+                GladiaClient(), sounddevice.RawInputStream,
+                silence_seconds=args.silence_seconds, input_device=args.input_device,
+            )
     except KeyboardInterrupt:
         print("\nVoice preview stopped.", file=sys.stderr)
         return 1
