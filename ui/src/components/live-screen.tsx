@@ -99,10 +99,10 @@ export function LiveScreen({ runId, frames, actions, active, replay, pinned, onP
                     exit={{ opacity: 0 }}
                     transition={{ type: "spring", stiffness: 300, damping: 22 }}
                   >
-                    <span className="absolute -top-5 -left-5 size-10 animate-ping rounded-full bg-brand/40" />
-                    <span className="absolute -top-3 -left-3 size-6 rounded-full border-2 border-white bg-brand/70 shadow-lg shadow-brand/50" />
+                    <span className="absolute -top-7 -left-7 size-14 animate-ping rounded-full bg-brand/40" />
+                    <span className="absolute -top-4 -left-4 size-8 rounded-full border-[3px] border-white bg-brand/70 shadow-lg shadow-brand/50" />
                     {typeof pointer.action.args.element === "string" && (
-                      <span className="absolute top-4 left-4 max-w-56 rounded-md bg-zinc-950/85 px-2 py-1 text-[11px] leading-tight font-medium whitespace-nowrap text-white shadow-lg ring-1 ring-white/10 backdrop-blur">
+                      <span className="absolute top-5 left-5 max-w-80 rounded-lg bg-zinc-950/85 px-3 py-1.5 text-sm leading-snug font-medium whitespace-nowrap text-white shadow-lg ring-1 ring-white/10 backdrop-blur">
                         {pointer.action.args.element}
                       </span>
                     )}
