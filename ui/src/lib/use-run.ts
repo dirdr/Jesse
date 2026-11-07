@@ -1,17 +1,8 @@
-import { useCallback, useEffect, useRef, useState } from "react"
+import { useCallback, useEffect, useState } from "react"
 import { toast } from "sonner"
-import { api, type ConversationEvent, type LiveState, type Snapshot } from "@/lib/api"
+import { api, type LiveState, type Snapshot } from "@/lib/api"
 
-const VOICE_KEY = "jesse-voice"
 const RUN_PARAM = "run"
-
-function readVoice(): boolean {
-  try {
-    return localStorage.getItem(VOICE_KEY) === "on"
-  } catch {
-    return false
-  }
-}
 
 function runFromUrl(): string | null {
   const id = new URLSearchParams(window.location.search).get(RUN_PARAM)
@@ -26,39 +17,11 @@ export function useRun() {
   const [live, setLive] = useState<LiveState | null>(null)
   const [report, setReport] = useState<string | null>(null)
   const [busy, setBusy] = useState(false)
-  const [voiceOn, setVoiceOn] = useState(readVoice)
-  const heard = useRef(new Set<string>())
-  const voiceRef = useRef(voiceOn)
-  voiceRef.current = voiceOn
-
-  const speak = useCallback((events: ConversationEvent[]) => {
-    for (const event of events) {
-      if (heard.current.has(event.id)) continue
-      heard.current.add(event.id)
-      if (event.speak && voiceRef.current && "speechSynthesis" in window) {
-        const utterance = new SpeechSynthesisUtterance(event.text)
-        utterance.lang = "en-US"
-        window.speechSynthesis.speak(utterance)
-      }
-    }
-  }, [])
-
-  const attach = useCallback(async (id: string, options: { speakHistory: boolean; replay: boolean }) => {
-    heard.current = new Set()
+  const attach = useCallback((id: string, replayMode: boolean) => {
     setReport(null)
     setLive(null)
-    setReplay(options.replay)
-    if (!options.speakHistory) {
-      try {
-        const first = await api.snapshot(id)
-        first.events.forEach((event) => heard.current.add(event.id))
-        setSnapshot(first)
-      } catch {
-        /* polling retries */
-      }
-    } else {
-      setSnapshot(null)
-    }
+    setSnapshot(null)
+    setReplay(replayMode)
     setRunId(id)
   }, [])
 
@@ -66,13 +29,13 @@ export function useRun() {
   useEffect(() => {
     const requested = runFromUrl()
     if (requested) {
-      void attach(requested, { speakHistory: false, replay: true })
+      attach(requested, true)
       return
     }
     api
       .current()
       .then(({ run_id }) => {
-        if (run_id) void attach(run_id, { speakHistory: false, replay: false })
+        if (run_id) attach(run_id, false)
       })
       .catch(() => undefined)
   }, [attach])
@@ -88,7 +51,6 @@ export function useRun() {
         if (cancelled) return
         setSnapshot(next)
         setLive(liveState)
-        speak(next.events)
         const key = `${next.status}:${next.events.length}`
         if (next.report_url && key !== lastReportKey) {
           lastReportKey = key
@@ -105,7 +67,7 @@ export function useRun() {
       cancelled = true
       window.clearTimeout(timer)
     }
-  }, [runId, speak])
+  }, [runId])
 
   const start = useCallback(
     async (question: string) => {
@@ -115,7 +77,7 @@ export function useRun() {
       try {
         const { run_id } = await api.start(text)
         window.history.replaceState(null, "", window.location.pathname)
-        await attach(run_id, { speakHistory: true, replay: false })
+        attach(run_id, false)
         return true
       } catch (error) {
         toast.error(error instanceof Error ? error.message : "Could not start the investigation")
@@ -171,18 +133,5 @@ export function useRun() {
     setReplay(false)
   }, [])
 
-  const toggleVoice = useCallback(() => {
-    setVoiceOn((on) => {
-      const next = !on
-      try {
-        localStorage.setItem(VOICE_KEY, next ? "on" : "off")
-      } catch {
-        /* storage unavailable */
-      }
-      if (!next && "speechSynthesis" in window) window.speechSynthesis.cancel()
-      return next
-    })
-  }, [])
-
-  return { runId, replay, snapshot, live, report, busy, voiceOn, start, steer, stop, reset, toggleVoice }
+  return { runId, replay, snapshot, live, report, busy, start, steer, stop, reset, attach }
 }

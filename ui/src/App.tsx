@@ -44,9 +44,7 @@ export default function App() {
           snapshot={snapshot}
           hasRun={hasRun}
           replay={run.replay}
-          voiceOn={run.voiceOn}
           reportReady={Boolean(run.report)}
-          onToggleVoice={run.toggleVoice}
           onStop={run.stop}
           onNew={run.reset}
           onReport={() => setReportOpen(true)}

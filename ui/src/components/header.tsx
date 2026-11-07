@@ -1,4 +1,4 @@
-import { ExternalLink, FileText, Plus, Square, Volume2, VolumeX } from "lucide-react"
+import { ExternalLink, FileText, Plus, Square } from "lucide-react"
 import { Button } from "@/components/ui/button"
 import {
   AlertDialog,
@@ -20,16 +20,13 @@ interface HeaderProps {
   snapshot: Snapshot | null
   hasRun: boolean
   replay: boolean
-  voiceOn: boolean
   reportReady: boolean
-  onToggleVoice: () => void
   onStop: () => void
   onNew: () => void
   onReport: () => void
 }
 
-export function Header({ snapshot, hasRun, replay, voiceOn, reportReady, onToggleVoice, onStop, onNew, onReport }: HeaderProps) {
-  const speechAvailable = typeof window !== "undefined" && "speechSynthesis" in window
+export function Header({ snapshot, hasRun, replay, reportReady, onStop, onNew, onReport }: HeaderProps) {
   const question = snapshot?.events.find((event) => event.author === "researcher")?.text ?? snapshot?.selection?.question
   return (
     <header className="sticky top-0 z-20 border-b border-border/60 bg-background/75 backdrop-blur-xl">
@@ -50,22 +47,6 @@ export function Header({ snapshot, hasRun, replay, voiceOn, reportReady, onToggl
 
         <div className="flex items-center gap-1.5">
           <StatusBadge status={snapshot?.status ?? "idle"} />
-          <Tooltip>
-            <TooltipTrigger asChild>
-              <Button
-                variant="ghost"
-                size="icon"
-                onClick={onToggleVoice}
-                disabled={!speechAvailable}
-                aria-pressed={voiceOn}
-                aria-label={voiceOn ? "Mute spoken updates" : "Read updates aloud"}
-              >
-                {voiceOn ? <Volume2 /> : <VolumeX />}
-              </Button>
-            </TooltipTrigger>
-            <TooltipContent>{voiceOn ? "Spoken updates on" : "Spoken updates off"}</TooltipContent>
-          </Tooltip>
-
           {snapshot?.agent_view_url && (
             <Tooltip>
               <TooltipTrigger asChild>
