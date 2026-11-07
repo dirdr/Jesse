@@ -1,6 +1,6 @@
 # Jesse
 
-Status: planning draft. Record agreed decisions here; resolve the open choices and obtain the user's final shared-understanding confirmation before implementation.
+Status: NetLogo desktop feasibility implementation authorized. Remaining product choices apply to later slices.
 
 ## Product
 
@@ -121,6 +121,8 @@ Working language and speech-output approach remain open decisions.
 7. Produce the artifact and demo. Done when Markdown math and diagrams render in the chosen viewing surface, evidence links resolve, and supported, inconclusive and blocked outcomes have been exercised.
 
 ## Domain code: vertical slices
+
+Use uv with pyproject.toml for Python packaging and dependency management. Keep .env.example as the credential template; load local secrets through uv run --env-file .env. Keep .env ignored. Organize each feature under src/jesse by domain/use case. Domain and application logic depend on narrow protocols; SDK and persistence adapters implement those boundaries. Compose them at the feature entry point.
 
 Organize domain code around use cases, such as selecting an application, recording an observation, analyzing measurements, or producing a report. Co-locate each slice's application logic, domain rules, input/output contracts, and relevant tests. Keep provider and persistence integrations behind narrow interfaces; share infrastructure only when multiple slices actually need it.
 

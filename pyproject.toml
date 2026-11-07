@@ -1,0 +1,13 @@
+[project]
+name = "jesse"
+version = "0.1.0"
+description = "Autonomous experimental investigations through computer use"
+requires-python = ">=3.13,<3.14"
+dependencies = ["hai-agents[cli,desktop]"]
+
+[project.scripts]
+jesse-netlogo = "jesse.experiments.netlogo.cli:main"
+
+[build-system]
+requires = ["uv_build>=0.13.7,<0.14"]
+build-backend = "uv_build"
