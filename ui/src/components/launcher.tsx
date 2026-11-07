@@ -25,7 +25,7 @@ export function Launcher({ busy, onStart }: { busy: boolean; onStart: (question:
 
   return (
     <div className="mx-auto flex w-full max-w-3xl flex-1 flex-col justify-center py-10">
-      <motion.div initial={{ opacity: 0.4, y: 8 }} animate={{ opacity: 1, y: 0 }} transition={{ duration: 0.5 }}>
+      <motion.div initial={{ y: 8 }} animate={{ y: 0 }} transition={{ duration: 0.5 }}>
         <h1>
           <Logo size="lg" />
         </h1>
