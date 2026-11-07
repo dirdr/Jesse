@@ -1,4 +1,4 @@
-import { ExternalLink, FileText, Plus, Square } from "lucide-react"
+import { ExternalLink, FileText, Plus, Square, Volume2, VolumeX } from "lucide-react"
 import { Button } from "@/components/ui/button"
 import {
   AlertDialog,
@@ -26,9 +26,10 @@ interface HeaderProps {
   onNew: () => void
   onReport: () => void
   mic: ReactNode
+  speech: { available: boolean; on: boolean; toggle: () => void }
 }
 
-export function Header({ snapshot, hasRun, replay, reportReady, onStop, onNew, onReport, mic }: HeaderProps) {
+export function Header({ snapshot, hasRun, replay, reportReady, onStop, onNew, onReport, mic, speech }: HeaderProps) {
   const question = snapshot?.events.find((event) => event.author === "researcher")?.text ?? snapshot?.selection?.question
   return (
     <header className="sticky top-0 z-20 border-b border-border/60 bg-background/75 backdrop-blur-xl">
@@ -50,6 +51,16 @@ export function Header({ snapshot, hasRun, replay, reportReady, onStop, onNew, o
         <div className="flex items-center gap-1.5">
           <StatusBadge status={snapshot?.status ?? "idle"} />
           {mic}
+          {hasRun && speech.available && (
+            <Tooltip>
+              <TooltipTrigger asChild>
+                <Button variant="ghost" size="icon" onClick={speech.toggle} aria-pressed={speech.on} aria-label={speech.on ? "Mute Jesse" : "Let Jesse talk"}>
+                  {speech.on ? <Volume2 /> : <VolumeX />}
+                </Button>
+              </TooltipTrigger>
+              <TooltipContent>{speech.on ? "Jesse talks: on" : "Jesse talks: off"}</TooltipContent>
+            </Tooltip>
+          )}
           {snapshot?.agent_view_url && (
             <Tooltip>
               <TooltipTrigger asChild>

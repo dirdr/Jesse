@@ -9,14 +9,16 @@ import { SteerBar } from "@/components/steer-bar"
 import { OutcomeBadge, ReportSheet } from "@/components/details"
 import { useRun } from "@/lib/use-run"
 import { useVoice } from "@/lib/use-voice"
+import { useSpeech } from "@/lib/use-speech"
 import { TranscriptPill, VoiceButton } from "@/components/voice"
 
 export default function App() {
   const run = useRun()
   const voice = useVoice((runId) => {
     window.history.replaceState(null, "", window.location.pathname)
-    run.attach(runId, false)
+    run.attach(runId, false, true)
   })
+  const speech = useSpeech(run.runId, run.snapshot?.events, run.fresh, run.replay)
   const mic = <VoiceButton state={voice.state} onToggle={voice.toggle} />
   const [pinned, setPinned] = useState<number | null>(null)
   const [reportOpen, setReportOpen] = useState(false)
@@ -42,6 +44,7 @@ export default function App() {
           onNew={run.reset}
           onReport={() => setReportOpen(true)}
           mic={hasRun ? mic : null}
+          speech={speech}
         />
 
         {!hasRun ? (

@@ -12,6 +12,13 @@ than the room level measured over the last 15 s, so distant voices are not trans
 measure the room. Raise `JESSE_VOICE_GATE_DB` in `.env` (for example 20) if other voices still get through; lower it
 if your own voice is cut. A headset microphone isolates best.
 
+## Jesse's voice
+
+When an OpenAI key is set, the panel's speaker button reads Jesse's announcements aloud (experiment selection,
+simulator opening, each recorded trial, the outcome). The controller sends only those event texts to OpenAI
+text-to-speech (`gpt-4o-mini-tts`, voice `ash`, an original character voice) and caches the mp3 in the run folder.
+Earlier history is never read aloud. Override with `JESSE_TTS_VOICE` or `JESSE_TTS_MODEL`.
+
 ## Terminal preview
 
 This prototype streams microphone audio to Gladia, displays partial transcripts,

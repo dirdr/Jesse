@@ -7,7 +7,7 @@ import time
 
 from jesse.recording.adapters import FileObservations
 from jesse.recording.domain import Observation
-from jesse.runtime import json_value
+from jesse.runtime import conversation_event, json_value
 from .ports import ExperimentRecords
 
 
@@ -117,7 +117,10 @@ class FileExperimentRecords:
         temporary.replace(path)
 
     def session_started(self, session: dict) -> None:
+        first = not (self.folder / "session.json").exists()
         self._json("session.json", session)
+        if first:
+            conversation_event(self.folder, "session", "The simulator is opening. Watch me work.", speak=True)
         if session.get("agent_view_url"):
             print(f"Agent View: {session['agent_view_url']}", flush=True)
 
@@ -132,11 +135,15 @@ class FileExperimentRecords:
         # A retry keeps the original controller timestamp; the tool may be
         # delivered more than once even when its payload is unchanged.
         existing_path = self.folder / "observations" / f"{observation.observation_id}.json"
-        if existing_path.exists():
+        new = not existing_path.exists()
+        if not new:
             from dataclasses import replace
             original = json.loads(existing_path.read_text(encoding="utf-8"))
             observation = replace(observation, observed_at=original["observed_at"])
         result = self.observations.record(observation)
+        if new and observation.status == "observed" and observation.value is not None:
+            conversation_event(self.folder, "measurement",
+                f"{observation.trial_id} recorded: {observation.value:g} {observation.unit or ''}".strip() + ".", speak=True)
         if self.first_observation_seconds is None:
             self.first_observation_seconds = time.monotonic() - self.started
         self._metrics()
@@ -185,6 +192,8 @@ class FileExperimentRecords:
         })
         self._metrics()
         self._evidence_index()
+        conversation_event(self.folder, "finished",
+            f"Done. Outcome: {outcome.replace('_', ' ')}. The report is ready.", speak=True)
         evidence = ["- [Session metadata](session.json)"] if (self.folder / "session.json").exists() else []
         if (self.folder / "events.jsonl").exists():
             evidence.append("- [Session events](events.jsonl)")

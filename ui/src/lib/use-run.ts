@@ -17,7 +17,10 @@ export function useRun() {
   const [live, setLive] = useState<LiveState | null>(null)
   const [report, setReport] = useState<string | null>(null)
   const [busy, setBusy] = useState(false)
-  const attach = useCallback((id: string, replayMode: boolean) => {
+  /** True when the run was started from this page: its announcements are new and may be spoken. */
+  const [fresh, setFresh] = useState(false)
+  const attach = useCallback((id: string, replayMode: boolean, startedHere = false) => {
+    setFresh(startedHere)
     setReport(null)
     setLive(null)
     setSnapshot(null)
@@ -77,7 +80,7 @@ export function useRun() {
       try {
         const { run_id } = await api.start(text)
         window.history.replaceState(null, "", window.location.pathname)
-        attach(run_id, false)
+        attach(run_id, false, true)
         return true
       } catch (error) {
         toast.error(error instanceof Error ? error.message : "Could not start the investigation")
@@ -133,5 +136,5 @@ export function useRun() {
     setReplay(false)
   }, [])
 
-  return { runId, replay, snapshot, live, report, busy, start, steer, stop, reset, attach }
+  return { runId, replay, snapshot, live, report, busy, fresh, start, steer, stop, reset, attach }
 }
