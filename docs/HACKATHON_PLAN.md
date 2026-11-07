@@ -148,7 +148,7 @@ The demo should show a question becoming an experiment, a checked comparison, a 
 - [ ] C: deliver one final transcript per Gladia utterance to the existing text-input boundary.
 - [ ] A + C: apply a spoken correction to the active investigation at a trial boundary and acknowledge when it takes effect.
 - [ ] C: choose speech output and test brief plan, finding and blocker updates in the shared lab-colleague voice.
-- [ ] A + B: enable native Screen Recording, pass the desktop check and demonstrate the matched native protocol.
+- [x] A + B: enable native Screen Recording, pass the desktop check and demonstrate the matched native protocol. Run `20261107T133143442966Z`, replay-verified.
 - [ ] A + B: compare desktop/web completion and performance under the same protocol and budget; label unavailable results.
 - [ ] All: rehearse the whole pitch twice, including Agent View and report navigation.
 - [ ] C: capture a genuine backup replay, label it as a replay, and verify submission materials.

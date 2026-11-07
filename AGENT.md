@@ -1,6 +1,6 @@
 # Jesse
 
-Status: bounded NetLogo web/desktop execution, observation recording, rate analysis and question-based catalogue routing are implemented. OpenAI/PydanticAI and H selection backends have passed live routing checks. Scientific replay acceptance and a full analysis-driven follow-up remain open; native interaction proof is still pending. Remaining product choices apply to later slices.
+Status: bounded NetLogo web/desktop execution, observation recording, rate analysis and question-based catalogue routing are implemented. OpenAI/PydanticAI and H selection backends have passed live routing checks. Native desktop interaction proof is accepted (run 20261107T133143442966Z, replay-verified). Scientific replay acceptance of the web evidence and a full analysis-driven follow-up remain open. Remaining product choices apply to later slices.
 
 Team constraints: three people, 24 hours until submission as of planning, with work expected to start in 8–10 hours. Plan around eight focused implementation hours.
 
