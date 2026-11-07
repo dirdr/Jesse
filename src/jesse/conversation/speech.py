@@ -1,4 +1,4 @@
-"""Speak Jesse's announcements with OpenAI text-to-speech, in the researcher's language.
+"""Speak Jesse's announcements with ElevenLabs (or OpenAI) text-to-speech, in the researcher's language.
 
 Only events marked `speak` in a run are synthesized; each is localized to the language of the run's question first.
 """
@@ -78,9 +78,27 @@ def _translate(text: str, question: str) -> str:
     return response.json()["choices"][0]["message"]["content"].strip() or text
 
 
+ELEVENLABS_URL = "https://api.elevenlabs.io/v1/text-to-speech/{voice}?output_format=mp3_44100_128"
+ELEVENLABS_MODEL = "eleven_multilingual_v2"
+# "Liam", a premade ElevenLabs library voice (young, confident American). Not a clone of anyone.
+ELEVENLABS_VOICE = "TX3LPaxmHKxFdv7VOQHJ"
+
+
+def elevenlabs_key() -> str:
+    return os.environ.get("ELEVENLABS_API_KEY", "").strip()
+
+
 def _synthesize(text: str) -> bytes:
+    """ElevenLabs when its key is set; OpenAI text-to-speech otherwise."""
     import httpx
 
+    if elevenlabs_key():
+        voice = os.environ.get("JESSE_ELEVENLABS_VOICE") or ELEVENLABS_VOICE
+        response = httpx.post(ELEVENLABS_URL.format(voice=voice), timeout=30, headers={"xi-api-key": elevenlabs_key()},
+            json={"text": text, "model_id": os.environ.get("JESSE_ELEVENLABS_MODEL") or ELEVENLABS_MODEL,
+                  "voice_settings": {"stability": 0.5, "similarity_boost": 0.75, "style": 0.3, "use_speaker_boost": True}})
+        response.raise_for_status()
+        return response.content
     response = httpx.post(SPEECH_URL, timeout=30, headers={"Authorization": f"Bearer {openai_key()}"},
         json={"model": os.environ.get("JESSE_TTS_MODEL") or MODEL, "voice": os.environ.get("JESSE_TTS_VOICE") or VOICE,
               "input": text, "instructions": INSTRUCTIONS, "response_format": "mp3"})
