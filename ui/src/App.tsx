@@ -4,7 +4,7 @@ import { TooltipProvider } from "@/components/ui/tooltip"
 import { Header } from "@/components/header"
 import { Launcher } from "@/components/launcher"
 import { LiveScreen } from "@/components/live-screen"
-import { ActivityPanel, MeasurementsPanel, PlanPanel } from "@/components/side-panels"
+import { MeasurementsPanel, PlanPanel } from "@/components/side-panels"
 import { SteerBar } from "@/components/steer-bar"
 import { OutcomeBadge, ReportSheet } from "@/components/details"
 import { useRun } from "@/lib/use-run"
@@ -86,12 +86,6 @@ export default function App() {
             <aside className="flex min-w-0 flex-col gap-4 xl:sticky xl:top-[4.5rem] xl:max-h-[calc(100vh-5.5rem)]">
               <PlanPanel plan={live?.plan ?? []} />
               <MeasurementsPanel measurements={live?.measurements ?? []} />
-              <ActivityPanel
-                actions={live?.actions ?? []}
-                events={snapshot?.events ?? []}
-                selectedFrame={pinned}
-                onSelectFrame={setPinned}
-              />
             </aside>
           </main>
         )}

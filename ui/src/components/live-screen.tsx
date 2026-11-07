@@ -1,8 +1,7 @@
-import { useEffect, useMemo, useRef, useState } from "react"
+import { useEffect, useMemo, useState } from "react"
 import { AnimatePresence, motion } from "motion/react"
 import { ChevronLeft, ChevronRight, MonitorPlay, Radio } from "lucide-react"
 import { Button } from "@/components/ui/button"
-import { cn } from "@/lib/utils"
 import { actionStyle, describe, plain, pointOf } from "@/lib/actions"
 import { api, type Action, type Frame } from "@/lib/api"
 
@@ -131,7 +130,7 @@ export function LiveScreen({ runId, frames, actions, active, replay, pinned, onP
                   {describe(lastAction)}
                 </div>
               )}
-              {caption && <p className="line-clamp-2 max-w-3xl text-sm leading-snug text-white/95">{plain(caption)}</p>}
+              {caption && <p className="truncate text-sm text-white/90">{plain(caption)}</p>}
             </div>
           )}
 
@@ -160,48 +159,40 @@ export function LiveScreen({ runId, frames, actions, active, replay, pinned, onP
         </div>
       </div>
 
-      {frames.length > 0 && <Filmstrip runId={runId} frames={frames} shown={shown} following={following} onPin={onPin} />}
+      {frames.length > 1 && <Scrubber frames={frames} shown={shown} following={following} onPin={onPin} />}
     </div>
   )
 }
 
-function Filmstrip({
-  runId,
+function Scrubber({
   frames,
   shown,
   following,
   onPin,
 }: {
-  runId: string
   frames: Frame[]
   shown: number
   following: boolean
   onPin: (index: number | null) => void
 }) {
-  const strip = useRef<HTMLDivElement>(null)
-  useEffect(() => {
-    strip.current?.querySelector(`[data-frame="${shown}"]`)?.scrollIntoView({ block: "nearest", inline: "nearest", behavior: "smooth" })
-  }, [shown])
-
+  const last = frames.length - 1
   return (
-    <div className="flex items-center gap-2">
-      <div ref={strip} className="flex min-w-0 flex-1 gap-1.5 overflow-x-auto pb-1 [scrollbar-width:thin]">
-        {frames.map((frame) => (
-          <button
-            key={frame.index}
-            type="button"
-            data-frame={frame.index}
-            onClick={() => onPin(frame.index === frames.length - 1 ? null : frame.index)}
-            aria-label={`Show screen ${frame.index + 1}`}
-            className={cn(
-              "relative h-12 w-20 shrink-0 overflow-hidden rounded-md bg-zinc-900 ring-1 transition",
-              frame.index === shown ? "ring-2 ring-brand" : "opacity-60 ring-border hover:opacity-100",
-            )}
-          >
-            <img src={api.frameUrl(runId, frame.index)} alt="" loading="lazy" className="size-full object-cover" />
-          </button>
-        ))}
-      </div>
+    <div className="flex items-center gap-3">
+      <label htmlFor="scrubber" className="sr-only">
+        Screen
+      </label>
+      <input
+        id="scrubber"
+        type="range"
+        min={0}
+        max={Math.max(0, last)}
+        value={Math.max(0, shown)}
+        onChange={(event) => {
+          const index = Number(event.target.value)
+          onPin(index >= last ? null : index)
+        }}
+        className="h-1.5 flex-1 cursor-pointer accent-[var(--brand)]"
+      />
       {!following && (
         <Button size="sm" variant="secondary" onClick={() => onPin(null)} className="shrink-0">
           <Radio /> Latest

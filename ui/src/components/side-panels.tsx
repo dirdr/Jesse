@@ -63,6 +63,12 @@ export function PlanPanel({ plan }: { plan: PlanGoal[] }) {
 }
 
 export function MeasurementsPanel({ measurements }: { measurements: Measurement[] }) {
+  // Constants (same value in every trial) are noise here; show only what was varied.
+  const varied = new Set(
+    Object.keys(measurements[0]?.fields ?? {}).filter(
+      (key) => new Set(measurements.map((row) => row.fields[key])).size > 1,
+    ),
+  )
   return (
     <Panel
       title="Measurements"
@@ -84,7 +90,7 @@ export function MeasurementsPanel({ measurements }: { measurements: Measurement[
               </div>
               {row.result && <div className="mt-1 text-lg font-semibold tracking-tight tabular-nums">{row.result}</div>}
               <div className="mt-2 flex flex-wrap gap-1.5">
-                {Object.entries(row.fields).map(([key, value]) => (
+                {Object.entries(row.fields).filter(([key]) => varied.has(key)).map(([key, value]) => (
                   <span key={key} className="rounded-md bg-muted px-1.5 py-0.5 font-mono text-[11px] text-muted-foreground">
                     {key} <span className="text-foreground">{value}</span>
                   </span>
