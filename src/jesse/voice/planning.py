@@ -7,8 +7,9 @@ from collections.abc import Callable
 
 
 class VoicePlanningQueue:
-    def __init__(self, plan: Callable[[str], int], capacity: int = 4):
+    def __init__(self, plan: Callable[[str], int], capacity: int = 4, *, operation: str = "planning"):
         self._plan = plan
+        self._operation = operation
         self._queue: queue.Queue[str | None] = queue.Queue(maxsize=capacity)
         self._failed = False
         self._worker = threading.Thread(target=self._run, name="voice-planner")
@@ -28,13 +29,16 @@ class VoicePlanningQueue:
             try:
                 if transcript is None:
                     return
-                print("\nPlanning a spoken question; no H session will start.", flush=True)
+                if self._operation == "planning":
+                    print("\nPlanning a spoken question; no H session will start.", flush=True)
+                else:
+                    print(f"\nProcessing spoken question: {self._operation}.", flush=True)
                 try:
                     result = self._plan(transcript)
                 except Exception as error:
                     self._failed = True
                     print(
-                        f"Voice planning failed ({type(error).__name__}). "
+                        f"Voice {self._operation} failed ({type(error).__name__}). "
                         "Check provider access and configuration.",
                         file=sys.stderr,
                         flush=True,
@@ -43,7 +47,7 @@ class VoicePlanningQueue:
                     if result:
                         self._failed = True
                         print(
-                            "Voice planning was blocked; inspect the selection and run artifacts.",
+                            f"Voice {self._operation} was blocked; inspect the run artifacts.",
                             file=sys.stderr,
                             flush=True,
                         )

@@ -1,4 +1,4 @@
-"""Preview live Gladia transcripts as messages for H without sending them."""
+"""Transcribe live Gladia turns and optionally prepare or submit them to H."""
 
 import argparse
 import os
@@ -154,7 +154,7 @@ def run_live_preview(
 
 
 def main(argv: list[str] | None = None) -> int:
-    parser = argparse.ArgumentParser(description="Preview Gladia live voice turns without sending to H.")
+    parser = argparse.ArgumentParser(description=__doc__)
     parser.add_argument(
         "--silence-seconds", type=float, default=TURN_SILENCE,
         help="seconds without speech before completing a turn (default: 1.5)",
@@ -167,6 +167,10 @@ def main(argv: list[str] | None = None) -> int:
     modes.add_argument(
         "--prepare", action="store_true",
         help="enrich each completed turn for an H prompt preview without starting H",
+    )
+    modes.add_argument(
+        "--run", action="store_true",
+        help="enrich completed turns and send them to one interactive H browser session",
     )
     parser.add_argument(
         "--surface", choices=("auto", "web", "desktop"), default="auto",
@@ -183,10 +187,13 @@ def main(argv: list[str] | None = None) -> int:
     if not args.list_inputs and not os.environ.get("GLADIA_API_KEY", "").strip():
         print("Blocked: set GLADIA_API_KEY in the environment.", file=sys.stderr)
         return 1
-    if not args.list_inputs and (args.plan or args.prepare) and not any(
+    if not args.list_inputs and (args.plan or args.prepare or args.run) and not any(
         os.environ.get(name, "").strip() for name in ("OPENAI_API_KEY", "OPENAI_KEY")
     ):
         print("Blocked: set OPENAI_API_KEY or OPENAI_KEY for voice planning.", file=sys.stderr)
+        return 1
+    if not args.list_inputs and args.run and not os.environ.get("HAI_API_KEY", "").strip():
+        print("Blocked: set HAI_API_KEY for the H session.", file=sys.stderr)
         return 1
     try:
         import sounddevice
@@ -201,11 +208,24 @@ def main(argv: list[str] | None = None) -> int:
             return 0
         device = sounddevice.query_devices(args.input_device, kind="input")
         print(f'Microphone: {device["name"]}', flush=True)
-        print("Audio is streamed to Gladia. No message is sent to H.", flush=True)
-        if args.plan or args.prepare:
+        if args.run:
+            print("Audio is streamed to Gladia; final turns are sent to OpenAI and H.", flush=True)
+            print("Ctrl+C stops listening and cancels the H session, including unfinished work.", flush=True)
+        else:
+            print("Audio is streamed to Gladia. No message is sent to H.", flush=True)
+        if args.plan or args.prepare or args.run:
             from jesse.selecting.cli import main as select_question
 
+            workflow = None
+            if args.run:
+                from .workflow import VoiceWorkflow
+
+                model = args.planner_model or os.environ.get("OPENAI_MODEL", "gpt-5-mini")
+                workflow = VoiceWorkflow(model)
+
             def plan(transcript: str) -> int:
+                if workflow is not None:
+                    return workflow.submit(transcript)
                 if args.prepare:
                     from .preparation import PydanticRequestPreparer, print_prepared_request
 
@@ -219,7 +239,7 @@ def main(argv: list[str] | None = None) -> int:
                 options.extend(["--", transcript])
                 return select_question(options)
 
-            planning = VoicePlanningQueue(plan)
+            planning = VoicePlanningQueue(plan, operation="H submission" if args.run else "planning")
 
             def submit_turn(transcript: str) -> None:
                 print_turn(transcript)
@@ -233,7 +253,8 @@ def main(argv: list[str] | None = None) -> int:
                 )
             finally:
                 planning_ok = planning.close()
-            if not planning_ok:
+                workflow_ok = workflow.close() if workflow is not None else True
+            if not planning_ok or not workflow_ok:
                 return 1
         else:
             run_live_preview(

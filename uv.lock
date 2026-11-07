@@ -223,6 +223,23 @@ source = { registry = "https://pypi.org/simple" }
 sdist = { url = "https://files.pythonhosted.org/packages/2e/07/eb30593524303d1367f0dc00c1c66582c994dba412a47751e34bad9fa29b/evdev-2.0.0.tar.gz", hash = "sha256:442fb3f4c8dfc9e61e901133c356220c02d663eca8f34722e0cecdd637eba504", size = 33766, upload-time = "2026-08-23T10:31:26.835Z" }
 
 [[package]]
+name = "fastapi"
+version = "0.162.1"
+source = { registry = "https://pypi.org/simple" }
+dependencies = [
+    { name = "annotated-doc" },
+    { name = "opentelemetry-api" },
+    { name = "pydantic" },
+    { name = "starlette" },
+    { name = "typing-extensions" },
+    { name = "typing-inspection" },
+]
+sdist = { url = "https://files.pythonhosted.org/packages/eb/fb/3e954cd19540d69f9547e2577afe73b2eadad2ee47b691376a5b9345c50a/fastapi-0.162.1.tar.gz", hash = "sha256:b18411785f55d05baa296fcfa2901f26728483190e7d8eb8f8e6aa47ed94b030", size = 529173, upload-time = "2026-11-07T11:56:03.769Z" }
+wheels = [
+    { url = "https://files.pythonhosted.org/packages/5c/06/83c13e92ae48a2cb0e8adfa939a93f5c7165e64f5bff916a3fbf5c59f7fb/fastapi-0.162.1-py3-none-any.whl", hash = "sha256:8107bbfbde522cbd3edcfb32e4923f1786fc52d901ff60a9f724f142df24a648", size = 150728, upload-time = "2026-11-07T11:56:02.09Z" },
+]
+
+[[package]]
 name = "genai-prices"
 version = "0.2.1"
 source = { registry = "https://pypi.org/simple" }
@@ -405,18 +422,22 @@ name = "jesse"
 version = "0.1.0"
 source = { editable = "." }
 dependencies = [
+    { name = "fastapi" },
     { name = "gladiaio-sdk" },
     { name = "hai-agents", extra = ["cli", "desktop"] },
     { name = "pydantic-ai-slim", extra = ["openai"] },
     { name = "sounddevice" },
+    { name = "uvicorn" },
 ]
 
 [package.metadata]
 requires-dist = [
+    { name = "fastapi", specifier = ">=0.115,<1" },
     { name = "gladiaio-sdk", specifier = ">=2.2.1" },
     { name = "hai-agents", extras = ["cli", "desktop"] },
     { name = "pydantic-ai-slim", extras = ["openai"], specifier = ">=2.66,<3" },
     { name = "sounddevice", specifier = ">=0.5.6" },
+    { name = "uvicorn", specifier = ">=0.34,<1" },
 ]
 
 [[package]]

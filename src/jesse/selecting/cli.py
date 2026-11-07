@@ -8,6 +8,8 @@ import time
 
 from jesse.experiments.netlogo.cli import run_ready_experiment
 from jesse.experiments.netlogo.preflight import check_desktop, checks_payload
+from jesse.experiments.coolant.cli import run_ready_experiment as run_coolant_experiment
+from jesse.runtime import conversation_event
 from .adapters import HExperimentPlanner, PydanticExperimentPlanner
 from .application import select_experiment
 from .domain import CATALOGUE, PlannerUnavailable, Selection
@@ -47,6 +49,8 @@ def main(argv: list[str] | None = None) -> int:
     parser.add_argument("--plan-only", action="store_true", help="Select a protocol without operating scientific software")
     parser.add_argument("--timeout", type=int, default=300, metavar="SECONDS", help="Shared selection and execution budget, 1–600 seconds")
     parser.add_argument("--netlogo", type=Path, help="Optional installed NetLogo .app path")
+    parser.add_argument("--interactive", action="store_true", help="Keep supported sessions open for bounded conversation")
+    parser.add_argument("--run-dir", type=Path, help=argparse.SUPPRESS)
     args = parser.parse_args(argv)
     if args.catalogue:
         print(json.dumps([item.to_dict() for item in CATALOGUE], indent=2))
@@ -57,9 +61,12 @@ def main(argv: list[str] | None = None) -> int:
         parser.error("--timeout must be between 1 and 600 seconds")
 
     started = time.monotonic()
-    folder = Path("runs") / datetime.now(timezone.utc).strftime("%Y%m%dT%H%M%S%fZ")
-    folder.mkdir(parents=True)
+    folder = args.run_dir or Path("runs") / datetime.now(timezone.utc).strftime("%Y%m%dT%H%M%S%fZ")
+    if args.run_dir is not None and (folder / "request.json").exists():
+        parser.error("The supplied run directory already contains an investigation")
+    folder.mkdir(parents=True, exist_ok=args.run_dir is not None)
     print(f"Artifacts: {folder}", flush=True)
+    conversation_event(folder, "planning", "I’m checking which supported experiment fits your question.")
     model = args.planner_model or (os.environ.get("OPENAI_MODEL", "gpt-5-mini") if args.planner == "openai" else "holo4-27b")
     request = {"run_id": folder.name, "question": args.question, "surface_preference": args.surface,
                "planner": args.planner, "planner_model": model, "budget_seconds": args.timeout}
@@ -99,6 +106,7 @@ def main(argv: list[str] | None = None) -> int:
     save_json(folder, "selection.json", selected.to_dict())
     save_json(folder, "planning-metrics.json", {"elapsed_seconds": round(time.monotonic() - started, 3), "usage": planner.usage})
     print(json.dumps(selected.to_dict(), indent=2, ensure_ascii=False), flush=True)
+    conversation_event(folder, "selection", selected.reason, speak=True)
     if selected.status == "blocked" or args.plan_only:
         save_selection_report(folder, selected, args.plan_only)
         return 1 if selected.status == "blocked" else 0
@@ -109,7 +117,7 @@ def main(argv: list[str] | None = None) -> int:
         print("Selection used the execution budget; no simulator session started.")
         return 1
     # Explicit dispatch keeps a catalogue entry from importing arbitrary code.
-    if selected.experiment_id != "netlogo-enzyme-feasibility":
+    if selected.experiment_id not in {"netlogo-enzyme-feasibility", "chemcollective-coolant-feasibility"}:
         selected = Selection("blocked", args.question, "No approved executor is registered for this protocol.")
         save_json(folder, "selection.json", selected.to_dict())
         save_selection_report(folder, selected, False)
@@ -119,6 +127,8 @@ def main(argv: list[str] | None = None) -> int:
         "experiment": selected.experiment_id, "execution_budget_seconds": remaining,
     })
     save_json(folder, "preflight.json", availability[selected.surface])
+    if selected.experiment_id == "chemcollective-coolant-feasibility":
+        return run_coolant_experiment(folder, remaining, selected.question, args.interactive)
     return run_ready_experiment(folder, remaining, str(application) if application else None, selected.surface, selected.question)
 
 

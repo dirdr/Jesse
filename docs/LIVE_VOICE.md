@@ -1,9 +1,40 @@
-# Live voice preview
+# Live voice workflow
 
 This prototype streams microphone audio to Gladia, displays partial transcripts,
-and groups final utterances into researcher turns. Each completed turn is printed
-as a formatted message. Nothing is sent to H; there is no model reply or
-conversation history. Only speak content you are comfortable sending to Gladia.
+and groups final utterances into researcher turns. By default it only prints
+the transcript. Only speak content you are comfortable sending to Gladia.
+
+To enrich each completed turn with OpenAI and send it to an interactive H
+browser session, set `GLADIA_API_KEY`, `OPENAI_API_KEY` (or `OPENAI_KEY`) and
+`HAI_API_KEY` in `.env`, then run:
+
+```sh
+uv run --env-file .env python -m jesse.voice.live --run
+```
+
+The first turn starts a hosted visual-browser session; subsequent turns are
+enriched independently and sent to that same session while it remains open.
+The terminal shows the enriched request, H answers, and Agent View link.
+Original transcripts, prepared requests, submission status and session events
+are saved under `runs/`. Both OpenAI and H receive the request, and H can browse
+the web; their services may incur charges. Do not speak private data unless you
+intend to send it to all three providers.
+
+This general browser workflow does not select or execute the approved
+experiment protocols or their recording and analysis tools. H's response and
+any scientific conclusions are unverified. It is instructed not to log in,
+submit forms or make external changes, but these are model instructions, not
+an enforced browser access policy. Watch Agent View. The session has a
+10-minute maximum and may also end after an idle timeout. Jesse checks session
+status before a follow-up, but H can restart a finished session if it ends
+between that check and the message submission. An accepted message is not
+confirmation that H has processed it. Delivery failures are reported as
+unknown and are not automatically retried.
+
+Pressing Ctrl+C stops listening, waits for queued turns to be processed, then
+cancels H; unfinished H work may be interrupted. Keep the listener open while
+waiting for answers or making follow-up requests. Background speech can still
+delay the detection of a completed turn.
 
 To preview an enriched request for the future computer-use agent without
 restricting it to the current catalogue, set `OPENAI_API_KEY` (or `OPENAI_KEY`)
@@ -87,5 +118,4 @@ recording application if recognition remains poor.
 For integration, `run_live_preview` accepts `on_turn(transcript)` and
 `on_partial(text)` callbacks. The finalized turn callback receives the raw
 transcript on the capture thread; consumers should enqueue work rather than block
-microphone capture. `build_spoken_request` formats a transcript for H. The
-prototype has not yet been connected to an H session.
+microphone capture. `build_spoken_request` formats a transcript for preview.

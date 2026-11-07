@@ -46,6 +46,7 @@ class PydanticExperimentPlanner:
                 "when its scientific capabilities fit the question; otherwise return blocked with the missing capability. "
                 "A question about whether more substrate increases enzyme reaction rate can begin with this bounded "
                 "preliminary protocol, but explain that two trials cannot establish saturation or answer an unrestricted claim. "
+                "Coolant heat-capacity questions fit the experimental ChemCollective activity; disclose that repeat and replay acceptance remain pending. "
                 "Reject unrelated topics, requests to modify code, inhibitor assays and requests that require a different protocol. "
                 "Select an available supported surface and honor an explicit preference. Prefer web for equivalent capabilities "
                 "when the preference is auto. Do not invent tools, experiments, evidence, installations or capabilities. "

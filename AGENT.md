@@ -1,6 +1,6 @@
 # Jesse
 
-Status: bounded NetLogo web/desktop execution, observation recording, rate analysis and question-based catalogue routing are implemented. OpenAI/PydanticAI and H selection backends have passed live routing checks. Scientific replay acceptance and a full analysis-driven follow-up remain open; native interaction proof is still pending. Remaining product choices apply to later slices.
+Status: bounded NetLogo web/desktop execution, observation recording, rate analysis and question-based catalogue routing are implemented. OpenAI/PydanticAI and H selection backends have passed live routing checks. Native desktop interaction proof is accepted (run 20261107T133143442966Z, replay-verified). Scientific replay acceptance of the web evidence and a full analysis-driven follow-up remain open. Remaining product choices apply to later slices.
 
 Team constraints: three people, 24 hours until submission as of planning, with work expected to start in 8–10 hours. Plan around eight focused implementation hours.
 
@@ -60,7 +60,7 @@ Operate the selected approved simulator through its browser or native desktop in
 
 Use hosted H sessions and retain agent_view_url for live viewing and replay in H Agent View. Keep one backend executor for custom tools; additional observers remain read-only. The backend must remain running while tool execution is needed.
 
-Gladia supplies voice transcription. The voice preview streams microphone audio to Gladia and groups final utterances into researcher turns. Its optional preparation mode uses PydanticAI to preview enriched computer-use requests without restricting them to the catalogue or sending them to H; suggestions and tool availability remain unverified. Its separate plan-only mode routes each turn through the existing catalogue selector. It does not yet maintain a conversation with H or apply spoken corrections to an active investigation. Spoken responses require a separate speech-output implementation. Devin and Linkup are outside the MVP.
+Gladia supplies voice transcription. The voice workflow groups final utterances into researcher turns. Its optional preparation mode previews PydanticAI-enriched requests; plan-only mode uses the catalogue selector. The user also authorized a separate general-browser `--run` mode: each turn is enriched and submitted to one interactive H session without catalogue selection. This is not an approved experimental protocol, does not expose validated observation or analysis tools, and its scientific output remains unverified. Browser behavior restrictions are instructions rather than an enforced access policy. It does not steer an active catalogue investigation. Spoken responses require a separate speech-output implementation. Devin and Linkup are outside the MVP.
 
 ## H harness and extension boundaries
 
@@ -111,6 +111,7 @@ flowchart TB
     P -->|"Return proposal for Python validation"| C
     U -->|"Speak a question"| G
     G -->|"Final turn: optional plan-only selection"| P
+    G -->|"Enrich and send turns: optional general-browser session"| H
     G -.->|"Future active-run correction"| C
     I -->|"Supply behavior and protocol"| C
     C -->|"Start session and return tool results"| H
@@ -143,7 +144,7 @@ Keep one desktop operator and one custom-tool executor. Additional agent provide
 
 Maintain a small explicit catalogue of approved tools. Each entry specifies scientific questions supported, available models or activities, launch location, browser or desktop environment, controllable parameters, observable outputs, assumptions, and tested interaction status. Candidate entries: ChemCollective, NetLogo and Algodoo. Inclusion is a proposal until its required GUI interactions have been demonstrated with H.
 
-`src/jesse/selecting/domain.py` now registers the Enzyme Kinetics feasibility protocol. `jesse "question"` selects and executes it; `--catalogue` lists capabilities and `--plan-only` routes without GUI execution. Only registered executors are dispatched. Unsupported questions and unavailable requested surfaces produce blocked reports. The direct `jesse-netlogo` command remains available without a selector API call. Anthropic credentials may be configured locally, but no Anthropic adapter is implemented.
+`src/jesse/selecting/domain.py` registers Enzyme Kinetics and experimental ChemCollective coolant feasibility protocols. `jesse "question"` selects and executes one; `--catalogue` lists capabilities and `--plan-only` routes without GUI execution. Only registered executors are dispatched through this path. Unsupported questions and unavailable requested surfaces produce blocked reports. The separate voice general-browser mode does not dispatch these protocols. The direct `jesse-netlogo` command remains available without a selector API call. Anthropic credentials may be configured locally, but no Anthropic adapter is implemented.
 
 Select the application that supports the requested measurement and explain the choice briefly. Use another application only when it contributes a relevant experimental or analysis capability. Shared subject matter alone does not make results from different models comparable. Unsupported questions produce a blocked outcome with the missing capability identified.
 
