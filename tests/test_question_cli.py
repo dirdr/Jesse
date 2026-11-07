@@ -1,5 +1,7 @@
 """Question routing must validate a plan before dispatching computer use."""
 from contextlib import contextmanager
+import contextlib
+import io
 import json
 import os
 from pathlib import Path
@@ -40,6 +42,15 @@ def setup_check(explicit, surface):
 
 
 class QuestionCliTests(unittest.TestCase):
+    def test_selection_output_displays_non_ascii_text(self):
+        planner = Planner(Proposal("blocked", None, None, "Aucun protocole moléculaire disponible."))
+        output = io.StringIO()
+        with workspace(), patch("jesse.selecting.cli.check_desktop", side_effect=setup_check), patch("jesse.selecting.cli.PydanticExperimentPlanner", return_value=planner):
+            with contextlib.redirect_stdout(output):
+                self.assertEqual(main(["Une molécule ?", "--plan-only"]), 1)
+        self.assertIn("Aucun protocole moléculaire disponible.", output.getvalue())
+        self.assertIn("Une molécule ?", output.getvalue())
+
     def test_selected_protocol_reuses_run_folder_and_preserves_question(self):
         planner = Planner(Proposal("select", CATALOGUE[0].experiment_id, "web", "A preliminary rate comparison is supported."))
         with workspace() as root, patch("jesse.selecting.cli.check_desktop", side_effect=setup_check), patch("jesse.selecting.cli.PydanticExperimentPlanner", return_value=planner), patch("jesse.selecting.cli.run_ready_experiment", return_value=0) as execute:

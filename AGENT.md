@@ -60,7 +60,7 @@ Operate the selected approved simulator through its browser or native desktop in
 
 Use hosted H sessions and retain agent_view_url for live viewing and replay in H Agent View. Keep one backend executor for custom tools; additional observers remain read-only. The backend must remain running while tool execution is needed.
 
-Gladia supplies voice transcription. Spoken responses require a separate speech-output implementation. Devin and Linkup are outside the MVP.
+Gladia supplies voice transcription. The voice workflow groups final utterances into researcher turns. Its optional preparation mode previews PydanticAI-enriched requests; plan-only mode uses the catalogue selector. The user also authorized a separate general-browser `--run` mode: each turn is enriched and submitted to one interactive H session without catalogue selection. This is not an approved experimental protocol, does not expose validated observation or analysis tools, and its scientific output remains unverified. Browser behavior restrictions are instructions rather than an enforced access policy. It does not steer an active catalogue investigation. Spoken responses require a separate speech-output implementation. Devin and Linkup are outside the MVP.
 
 ## H harness and extension boundaries
 
@@ -83,7 +83,7 @@ Solid connections show implemented paths; dashed connections show planned capabi
 ```mermaid
 flowchart TB
     U["Researcher"]
-    G["Gladia transcription<br/>Planned"]
+    G["Gladia transcription<br/>Live preview"]
     T["Speech output<br/>Provider to be chosen"]
 
     subgraph LOCAL["Jesse - local Python application"]
@@ -109,8 +109,10 @@ flowchart TB
     C -->|"Submit question and available surfaces"| P
     K -->|"Describe supported protocols"| P
     P -->|"Return proposal for Python validation"| C
-    U -.->|"Speak a question or correction"| G
-    G -.->|"Deliver final transcript"| C
+    U -->|"Speak a question"| G
+    G -->|"Final turn: optional plan-only selection"| P
+    G -->|"Enrich and send turns: optional general-browser session"| H
+    G -.->|"Future active-run correction"| C
     I -->|"Supply behavior and protocol"| C
     C -->|"Start session and return tool results"| H
     H -->|"Stream events and request observation writes"| C
@@ -142,7 +144,7 @@ Keep one desktop operator and one custom-tool executor. Additional agent provide
 
 Maintain a small explicit catalogue of approved tools. Each entry specifies scientific questions supported, available models or activities, launch location, browser or desktop environment, controllable parameters, observable outputs, assumptions, and tested interaction status. Candidate entries: ChemCollective, NetLogo and Algodoo. Inclusion is a proposal until its required GUI interactions have been demonstrated with H.
 
-`src/jesse/selecting/domain.py` now registers the Enzyme Kinetics feasibility protocol. `jesse "question"` selects and executes it; `--catalogue` lists capabilities and `--plan-only` routes without GUI execution. Only registered executors are dispatched. Unsupported questions and unavailable requested surfaces produce blocked reports. The direct `jesse-netlogo` command remains available without a selector API call. Anthropic credentials may be configured locally, but no Anthropic adapter is implemented.
+`src/jesse/selecting/domain.py` registers Enzyme Kinetics and experimental ChemCollective coolant feasibility protocols. `jesse "question"` selects and executes one; `--catalogue` lists capabilities and `--plan-only` routes without GUI execution. Only registered executors are dispatched through this path. Unsupported questions and unavailable requested surfaces produce blocked reports. The separate voice general-browser mode does not dispatch these protocols. The direct `jesse-netlogo` command remains available without a selector API call. Anthropic credentials may be configured locally, but no Anthropic adapter is implemented.
 
 Select the application that supports the requested measurement and explain the choice briefly. Use another application only when it contributes a relevant experimental or analysis capability. Shared subject matter alone does not make results from different models comparable. Unsupported questions produce a blocked outcome with the missing capability identified.
 

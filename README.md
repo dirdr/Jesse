@@ -15,6 +15,9 @@ uv run --env-file .env jesse-netlogo --surface web --timeout 300
 
 Open the printed **Agent View URL** to watch live. The current test runs NetLogo Enzyme Kinetics; evidence and reports are saved under `runs/`. See [run instructions](DESKTOP_TEST.md) for desktop setup and permissions.
 
+To preview spoken questions through Gladia and the Pydantic AI selector without
+starting H, see [live voice setup](docs/LIVE_VOICE.md).
+
 ## Architecture
 
 Python manages sessions, budgets, records, and reports. One hosted H agent operates the selected interface. Solid arrows show implemented paths; dashed arrows show planned capabilities. Native interaction still requires permission and verification.
@@ -22,7 +25,8 @@ Python manages sessions, budgets, records, and reports. One hosted H agent opera
 ```mermaid
 flowchart TB
     U["Researcher"]
-    G["Gladia transcription<br/>Planned"]
+    G["Gladia transcription<br/>Live preview"]
+    P["Catalogue selector<br/>Pydantic AI"]
     T["Speech output<br/>Provider to be chosen"]
 
     subgraph LOCAL["Jesse - local Python application"]
@@ -43,8 +47,9 @@ flowchart TB
     D["Local desktop connection<br/>NetLogo Desktop - permission required"]
 
     U -->|"Start text-driven run"| C
-    U -.->|"Speak a question or correction"| G
-    G -.->|"Deliver final transcript"| C
+    U -->|"Speak a question"| G
+    G -->|"Final turn: optional plan-only selection"| P
+    G -.->|"Future active-run correction"| C
     I -->|"Supply behavior and protocol"| C
     C -->|"Start session and return tool results"| H
     H -->|"Stream events and request observation writes"| C
