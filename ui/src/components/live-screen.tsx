@@ -193,11 +193,18 @@ function Scrubber({
         }}
         className="h-1.5 flex-1 cursor-pointer accent-[var(--brand)]"
       />
-      {!following && (
-        <Button size="sm" variant="secondary" onClick={() => onPin(null)} className="shrink-0">
-          <Radio /> Latest
-        </Button>
-      )}
+      {/* Always rendered so the slider width never changes when the button toggles. */}
+      <Button
+        size="sm"
+        variant="secondary"
+        onClick={() => onPin(null)}
+        disabled={following}
+        aria-hidden={following}
+        tabIndex={following ? -1 : 0}
+        className={following ? "invisible shrink-0" : "shrink-0"}
+      >
+        <Radio /> Latest
+      </Button>
     </div>
   )
 }
