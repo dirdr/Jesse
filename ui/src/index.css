@@ -211,8 +211,19 @@
   ::selection { background: var(--hazard); color: var(--hazard-foreground); }
 }
 .katex { font-size: 1.02em; }
+.jesse-spinner {
+  display: block;
+  transform-box: view-box;
+  transform-origin: 50% 50%;
+  animation: jesse-spinner-rotate 1s linear infinite;
+}
+@keyframes jesse-spinner-rotate {
+  from { transform: rotate(0deg); }
+  to { transform: rotate(360deg); }
+}
 @media (prefers-reduced-motion: reduce) {
-  *, *::before, *::after { animation-duration: 0.01ms !important; transition-duration: 0.01ms !important; }
+  *, *::before, *::after { animation-duration: 0.01ms !important; animation-iteration-count: 1 !important; transition-duration: 0.01ms !important; }
+  .jesse-spinner, .animate-spin, .animate-ping, .animate-pulse { animation: none !important; }
 }
 
 /* Rendered investigation report */

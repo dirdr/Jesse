@@ -1,7 +1,8 @@
 import { useState, type ReactNode } from "react"
 import { motion } from "motion/react"
-import { FlaskConical, Loader2 } from "lucide-react"
+import { FlaskConical } from "lucide-react"
 import { Button } from "@/components/ui/button"
+import { Spinner } from "@/components/ui/spinner"
 import { Logo } from "@/components/logo"
 
 export function Launcher({
@@ -52,7 +53,7 @@ export function Launcher({
             className="flex-1 bg-hazard font-semibold text-hazard-foreground hover:bg-hazard/85 disabled:opacity-100 disabled:bg-hazard/35 disabled:text-hazard-foreground/70 sm:flex-none dark:disabled:text-foreground/60"
             disabled={busy || !question.trim()}
           >
-            {busy && <Loader2 className="animate-spin" />}
+            {busy && <Spinner />}
             Start experiment
           </Button>
         </div>

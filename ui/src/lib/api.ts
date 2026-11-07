@@ -23,6 +23,7 @@ export type RunStatus =
   | "planning"
   | "running"
   | "waiting"
+  | "report_ready"
   | "supported_conclusion"
   | "inconclusive"
   | "blocked"
@@ -46,6 +47,8 @@ export interface Snapshot {
   events: ConversationEvent[]
   outcome: { outcome: string; reason?: string } | null
   report_available: boolean
+  report_revision: string | null
+  session_state: string | null
   report_url: string | null
   selection: Selection | null
 }

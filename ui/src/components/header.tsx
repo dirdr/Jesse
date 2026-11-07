@@ -12,7 +12,6 @@ import {
   AlertDialogTrigger,
 } from "@/components/ui/alert-dialog"
 import { Tooltip, TooltipContent, TooltipTrigger } from "@/components/ui/tooltip"
-import { StatusBadge } from "@/components/status-badge"
 import { Logo } from "@/components/logo"
 import type { ReactNode } from "react"
 import type { Snapshot } from "@/lib/api"
@@ -53,7 +52,6 @@ export function Header({ snapshot, hasRun, replay, reportReady, onStop, onNew, o
 
         <div className="flex items-center gap-1.5">
           {persona}
-          <StatusBadge status={snapshot?.status ?? "idle"} />
           {mic}
           {hasRun && speech.available && (
             <Tooltip>

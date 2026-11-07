@@ -110,7 +110,7 @@ def execute(folder: Path, context: ResearchContext, surface: str, budget_seconds
                 (folder / "agent-report.md").write_text(str(data.get("answer", "")), encoding="utf-8")
                 lab.finish("The agent answered; measurements and verification require replay review.")
                 if interactive:
-                    conversation_event(folder, "waiting", "My current report is ready. You can ask a follow-up while this session remains open.")
+                    conversation_event(folder, "report_ready", "My current report is ready. You can ask a follow-up while this session remains open.")
             if payload.get("type") == "ActiveStateChangeEvent":
                 save_json(folder, "session-state.json", {"state": data.get("state")})
         result = handle.wait_for_completion(timeout_seconds=5)
@@ -144,7 +144,7 @@ def run_investigation(folder: Path, context: ResearchContext, surface: str, budg
         raise ValueError(f"Context {context.id} does not declare the {surface} surface")
     if not 1 <= budget_seconds <= 600:
         raise ValueError("Execution budget must be between 1 and 600 seconds")
-    lab = Lab(folder, context, question)
+    lab = Lab(folder, context, question, load_extension(context))
     (folder / "protocol.md").write_text(build_prompt(context, surface, question), encoding="utf-8")
     worker = multiprocessing.get_context("spawn").Process(
         target=execute, args=(folder, context, surface, budget_seconds, question, interactive))

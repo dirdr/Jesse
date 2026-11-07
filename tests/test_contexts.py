@@ -249,6 +249,30 @@ class RunnerTests(unittest.TestCase):
         self.assertFalse((folder / "stall.json").exists())
         self.assertNotIn("stopped responding", json.loads((folder / "outcome.json").read_text())["reason"])
 
+    def test_interactive_answer_publishes_report_before_session_closes(self):
+        class InteractiveHandle(FakeHandle):
+            def stream(inner, **kwargs):
+                self.assertEqual(kwargs["until"], "terminal")
+                yield from super(InteractiveHandle, inner).stream(**kwargs)
+                yield {"type": "AgentEvent", "data": {"kind": "answer_event", "answer": "Synthetic current answer"}}
+                yield {"type": "ActiveStateChangeEvent", "data": {"state": "idle"}}
+
+            def wait_for_completion(inner, **kwargs):
+                self.assertIn("Synthetic current answer", (inner.folder / "report.md").read_text())
+                self.assertIn('"kind": "report_ready"', (inner.folder / "conversation.jsonl").read_text())
+                self.assertEqual(json.loads((inner.folder / "session-state.json").read_text())["state"], "idle")
+                return super(InteractiveHandle, inner).wait_for_completion(**kwargs)
+
+        with tempfile.TemporaryDirectory() as directory:
+            folder = Path(directory)
+            context = synthetic_context()
+            (folder / "protocol.md").write_text(build_prompt(context, "web", "Synthetic question"))
+            handle = InteractiveHandle(folder)
+            client = FakeClient(handle)
+            execute(folder, context, "web", 120, "Synthetic question", interactive=True, client=client)
+            self.assertTrue(handle.cancelled)
+            self.assertFalse((folder / "error.json").exists())
+
     def test_stream_failure_cancels_and_retains_prior_evidence(self):
         folder, _, handle = self.run_session(fail=True)
         self.assertTrue(handle.cancelled)

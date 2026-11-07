@@ -17,12 +17,15 @@ export function useRun() {
   const [snapshot, setSnapshot] = useState<Snapshot | null>(null)
   const [live, setLive] = useState<LiveState | null>(null)
   const [report, setReport] = useState<string | null>(null)
+  const [reportError, setReportError] = useState<string | null>(null)
+  const [reportAttempt, setReportAttempt] = useState(0)
   const [busy, setBusy] = useState(false)
   /** True when the run was started from this page: its announcements are new and may be spoken. */
   const [fresh, setFresh] = useState(false)
   const attach = useCallback((id: string, replayMode: boolean, startedHere = false) => {
     setFresh(startedHere)
     setReport(null)
+    setReportError(null)
     setLive(null)
     setSnapshot(null)
     setReplay(replayMode)
@@ -39,7 +42,7 @@ export function useRun() {
     api
       .current()
       .then(async ({ run_id }) => {
-        if (run_id && (await api.snapshot(run_id)).active) attach(run_id, false)
+        if (run_id) attach(run_id, !(await api.snapshot(run_id)).active)
       })
       .catch(() => undefined)
   }, [attach])
@@ -51,16 +54,28 @@ export function useRun() {
     let lastReportKey = ""
     const tick = async () => {
       try {
-        const [next, liveState] = await Promise.all([api.snapshot(runId), api.live(runId)])
+        const [stateResult, liveResult] = await Promise.allSettled([api.snapshot(runId), api.live(runId)])
         if (cancelled) return
+        if (stateResult.status === "rejected") throw stateResult.reason
+        const next = stateResult.value
         setSnapshot(next)
-        setLive(liveState)
-        const key = `${next.status}:${next.events.length}`
+        if (liveResult.status === "fulfilled") setLive(liveResult.value)
+        else console.warn("Could not refresh agent screen", liveResult.reason)
+        const key = next.report_revision ?? `${next.status}:${next.events.length}`
         if (next.report_url && key !== lastReportKey) {
-          lastReportKey = key
-          api.report(next.report_url).then((text) => !cancelled && setReport(text)).catch(() => undefined)
+          try {
+            const text = await api.report(next.report_url)
+            if (cancelled) return
+            if (!text.trim()) throw new Error("The report is empty. Retrying…")
+            setReport(text)
+            setReportError(null)
+            lastReportKey = key
+          } catch (error) {
+            if (cancelled) return
+            setReportError(error instanceof Error ? error.message : "Could not load the report")
+          }
         }
-        if (next.active) timer = window.setTimeout(tick, 1500)
+        if (next.active || (next.report_url && key !== lastReportKey)) timer = window.setTimeout(tick, next.active ? 1500 : 4000)
       } catch (error) {
         console.warn(error)
         if (!cancelled) timer = window.setTimeout(tick, 4000)
@@ -71,7 +86,9 @@ export function useRun() {
       cancelled = true
       window.clearTimeout(timer)
     }
-  }, [runId])
+  }, [runId, reportAttempt])
+
+  const retryReport = useCallback(() => setReportAttempt((attempt) => attempt + 1), [])
 
   const start = useCallback(
     async (question: string) => {
@@ -134,8 +151,9 @@ export function useRun() {
     setSnapshot(null)
     setLive(null)
     setReport(null)
+    setReportError(null)
     setReplay(false)
   }, [])
 
-  return { runId, replay, snapshot, live, report, busy, fresh, start, steer, stop, reset, attach }
+  return { runId, replay, snapshot, live, report, reportError, retryReport, busy, fresh, start, steer, stop, reset, attach }
 }

@@ -2,6 +2,7 @@ import { useEffect, useMemo, useState } from "react"
 import { AnimatePresence, motion } from "motion/react"
 import { ChevronLeft, ChevronRight, MonitorPlay, Radio } from "lucide-react"
 import { Button } from "@/components/ui/button"
+import { Spinner } from "@/components/ui/spinner"
 import { actionStyle, describe, plain, pointOf } from "@/lib/actions"
 import { api, type Action, type Frame } from "@/lib/api"
 
@@ -52,17 +53,9 @@ export function LiveScreen({ runId, frames, actions, active, replay, pinned, onP
               <span className="inline-flex items-center gap-1.5 rounded-full bg-white/10 px-2 py-0.5 font-medium text-zinc-200">
                 <MonitorPlay className="size-3.5" /> Replay
               </span>
-            ) : active && following ? (
-              <span className="inline-flex items-center gap-1.5 rounded-full bg-red-500/15 px-2 py-0.5 font-medium text-red-400">
-                <span className="relative flex size-2">
-                  <span className="absolute inline-flex size-full animate-ping rounded-full bg-red-400 opacity-70" />
-                  <span className="relative inline-flex size-2 rounded-full bg-red-500" />
-                </span>
-                Live
-              </span>
-            ) : (
+            ) : !following ? (
               <span className="rounded-full bg-white/10 px-2 py-0.5 font-medium text-zinc-300">Paused view</span>
-            )}
+            ) : <span>Agent screen</span>}
           </div>
           <div className="flex items-center gap-3 font-mono tabular-nums">
             {frames.length > 0 && (
@@ -112,8 +105,8 @@ export function LiveScreen({ runId, frames, actions, active, replay, pinned, onP
             </>
           ) : (
             <div className="absolute inset-0 grid place-items-center">
-              <div className="flex flex-col items-center gap-3 text-zinc-400">
-                <div className="size-10 animate-spin rounded-full border-2 border-zinc-700 border-t-hazard" />
+              <div role="status" className="flex flex-col items-center gap-3 text-zinc-400">
+                {active && <Spinner className="size-10 text-hazard" />}
                 <span className="text-sm">{active ? "Opening the laboratory…" : "No screen was recorded for this run."}</span>
               </div>
             </div>

@@ -43,9 +43,12 @@ def run_summary(folder: Path) -> dict | None:
 
 class RunManager:
     def __init__(self, root: Path, *, popen=subprocess.Popen, send_message=None,
-                 context: str | None = None, contexts: Path | None = None):
+                 context: str | None = None, contexts: Path | None = None, surface: str = "auto"):
+        if surface not in {"auto", "web", "desktop"}:
+            raise ValueError("Unknown execution surface")
         self.root = root.resolve()
         self.context = context
+        self.surface = surface
         self.contexts = contexts.resolve() if contexts else None
         self.persona = get_persona().id
         self.root.mkdir(parents=True, exist_ok=True)
@@ -80,6 +83,8 @@ class RunManager:
                         command += ["--context", self.context]
                     if self.contexts:
                         command += ["--contexts", str(self.contexts)]
+                    if self.surface != "auto":
+                        command += ["--surface", self.surface]
                     self.process = self.popen(command, stdout=log, stderr=log, start_new_session=True,
                                               env={**os.environ, "JESSE_PERSONA": self.persona})
             except Exception:
@@ -121,14 +126,21 @@ class RunManager:
                 except json.JSONDecodeError:
                     continue  # Ignore an unfinished concurrent append until next poll.
         report = folder / "report.md"
-        status = ("waiting" if state == "idle" else "running" if session.get("id") else "planning") if active else (outcome or {}).get("outcome", "blocked")
+        report_exists = report.exists()
+        if not active:
+            status = (outcome or {}).get("outcome", "blocked")
+        elif state == "idle":
+            status = "report_ready" if report_exists else "waiting"
+        else:
+            status = "running" if session.get("id") else "planning"
         if not active and outcome is None:
             outcome = {"outcome": "blocked", "reason": "The worker is no longer running. Inspect the local worker log; no scientific conclusion was accepted."}
         return {"run_id": run_id, "active": active, "status": status, "persona": run_persona(folder).id,
                 "can_message": active and bool(session.get("id")),
                 "agent_view_url": session.get("agent_view_url"), "events": events,
-                "outcome": outcome, "report_available": report.exists(),
-                "report_url": f"/api/runs/{run_id}/report" if report.exists() else None,
+                "session_state": state, "outcome": outcome, "report_available": report_exists,
+                "report_revision": str(report.stat().st_mtime_ns) if report_exists else None,
+                "report_url": f"/api/runs/{run_id}/report" if report_exists else None,
                 "selection": read_json(folder / "selection.json")}
 
     def message(self, run_id: str, event_id: str, text: str, source: str) -> dict:

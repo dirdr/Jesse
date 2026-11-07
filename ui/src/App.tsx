@@ -1,4 +1,4 @@
-import { useEffect, useState } from "react"
+import { useEffect, useRef, useState } from "react"
 import { PanelLeft } from "lucide-react"
 import { Button } from "@/components/ui/button"
 import { Sheet, SheetContent, SheetTitle } from "@/components/ui/sheet"
@@ -35,6 +35,7 @@ export default function App() {
   const mic = <VoiceButton state={voice.state} onToggle={voice.toggle} />
   const [pinned, setPinned] = useState<number | null>(null)
   const [reportOpen, setReportOpen] = useState(false)
+  const openedReport = useRef<string | null>(null)
   const [menuOpen, setMenuOpen] = useState(false)
   const history = useHistory(`${run.runId}:${run.snapshot?.status ?? ""}`)
   const hasRun = run.runId !== null
@@ -45,7 +46,15 @@ export default function App() {
   useEffect(() => {
     setPinned(null)
     setReportOpen(false)
+    openedReport.current = null
   }, [run.runId])
+
+  useEffect(() => {
+    if (run.runId && run.report && !run.replay && openedReport.current !== run.runId) {
+      openedReport.current = run.runId
+      setReportOpen(true)
+    }
+  }, [run.runId, run.report, run.replay])
 
   const openRun = (summary: RunSummary) => {
     const replay = !summary.active
@@ -88,7 +97,7 @@ export default function App() {
             snapshot={snapshot}
             hasRun={hasRun}
             replay={run.replay}
-            reportReady={Boolean(run.report)}
+            reportReady={Boolean(snapshot?.report_available)}
             onStop={run.stop}
             onNew={newRun}
             onReport={() => setReportOpen(true)}
@@ -106,6 +115,7 @@ export default function App() {
             <main className="mx-auto grid w-full max-w-[1600px] flex-1 grid-cols-1 gap-5 px-4 py-5 sm:px-6 xl:grid-cols-[minmax(0,1fr)_400px]">
               <div className="flex min-w-0 flex-col gap-4">
                 <LiveScreen
+                  key={run.runId}
                   runId={run.runId!}
                   frames={live?.frames ?? []}
                   actions={live?.actions ?? []}
@@ -114,19 +124,23 @@ export default function App() {
                   pinned={pinned}
                   onPin={setPinned}
                 />
-                {finished && snapshot?.outcome ? (
+                {(snapshot?.report_available || finished) && (
                   <div className="flex flex-wrap items-center gap-3 rounded-md border border-border bg-card px-4 py-3">
-                    <OutcomeBadge outcome={snapshot.outcome.outcome} />
+                    {snapshot?.outcome && <OutcomeBadge outcome={snapshot.outcome.outcome} />}
+                    <span role="status" className="text-sm text-muted-foreground">
+                      {snapshot?.report_available
+                        ? snapshot.status === "report_ready" ? "Report ready · follow-ups available" : "Report available"
+                        : "The session ended without a report."}
+                    </span>
                     <span className="flex-1" />
-                    {run.report && (
+                    {snapshot?.report_available && (
                       <button type="button" onClick={() => setReportOpen(true)} className="text-sm font-medium text-brand hover:underline">
                         Read the report
                       </button>
                     )}
                   </div>
-                ) : (
-                  !run.replay && <SteerBar enabled={Boolean(snapshot?.can_message)} busy={run.busy} onSend={(text) => run.steer(text)} />
                 )}
+                {!finished && !run.replay && <SteerBar enabled={Boolean(snapshot?.can_message)} busy={run.busy} onSend={(text) => run.steer(text)} />}
               </div>
 
               <aside className="flex min-w-0 flex-col gap-4 xl:sticky xl:top-[4.5rem] xl:max-h-[calc(100vh-5.5rem)]">
@@ -139,7 +153,7 @@ export default function App() {
       </div>
       <TranscriptPill state={voice.state} />
       {personaId === "pinkman" && <TalkingJesse speaking={hasRun && !run.replay ? speech.speaking ?? line : null} />}
-      <ReportSheet open={reportOpen} onOpenChange={setReportOpen} snapshot={snapshot} report={run.report} />
+      <ReportSheet open={reportOpen} onOpenChange={setReportOpen} snapshot={snapshot} report={run.report} error={run.reportError} onRetry={run.retryReport} />
       <Toaster position="top-center" richColors />
     </TooltipProvider>
   )

@@ -104,7 +104,9 @@ class Lab:
                     raise ValueError(f"Invalid conclusion outcome: {outcome}")
         save_json(self.folder, "outcome.json", {"outcome": outcome, "reason": reason, "context": self.context.id,
                   "recorded_trials": len(observations), "verification": "pending_replay_review"})
-        (self.folder / "report.md").write_text(self._report(outcome, reason, observations), encoding="utf-8")
+        temporary = self.folder / "report.md.tmp"
+        temporary.write_text(self._report(outcome, reason, observations), encoding="utf-8")
+        temporary.replace(self.folder / "report.md")
         return outcome
 
     def _report(self, outcome: str, reason: str, observations: list[dict]) -> str:
@@ -126,6 +128,10 @@ class Lab:
             lines += ["", section(self).strip()]
         if context.assumptions:
             lines += ["", "## Assumptions", "", *[f"- {item}" for item in context.assumptions]]
+        answer = self.folder / "agent-report.md"
+        if answer.exists() and (interpretation := answer.read_text(encoding="utf-8").strip()):
+            lines += ["", "## Agent interpretation", "",
+                      "The following is the agent's interpretation, pending evidence and replay review.", "", interpretation]
         lines += ["", "## Verification", "",
                   "Replay review is pending. Agent-reported readings must be checked against the session replay before a conclusion is accepted. Findings concern the configured simulator.",
                   "", "## Evidence", ""]

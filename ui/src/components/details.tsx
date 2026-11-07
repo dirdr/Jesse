@@ -5,6 +5,7 @@ import rehypeKatex from "rehype-katex"
 import { CheckCircle2, CircleHelp, ExternalLink, Globe, Monitor, OctagonAlert } from "lucide-react"
 import { Sheet, SheetContent, SheetDescription, SheetHeader, SheetTitle } from "@/components/ui/sheet"
 import { cn } from "@/lib/utils"
+import { Button } from "@/components/ui/button"
 import type { Snapshot } from "@/lib/api"
 
 const OUTCOME = {
@@ -34,14 +35,18 @@ export function ReportSheet({
   onOpenChange,
   snapshot,
   report,
+  error,
+  onRetry,
 }: {
   open: boolean
   onOpenChange: (open: boolean) => void
   snapshot: Snapshot | null
   report: string | null
+  error: string | null
+  onRetry: () => void
 }) {
   const selection = snapshot?.selection
-  const outcome = snapshot && !snapshot.active ? snapshot.outcome : null
+  const outcome = snapshot?.outcome
   return (
     <Sheet open={open} onOpenChange={onOpenChange}>
       <SheetContent className="w-full gap-0 overflow-y-auto sm:max-w-2xl">
@@ -64,6 +69,12 @@ export function ReportSheet({
           </div>
         </SheetHeader>
         <div className="px-4 py-5">
+          {error && (
+            <div role="alert" className="mb-4 flex items-center justify-between gap-3 rounded-sm border border-destructive/30 p-3 text-sm">
+              <p>Could not refresh the report: {error}</p>
+              <Button variant="outline" size="sm" onClick={onRetry}>Retry</Button>
+            </div>
+          )}
           {outcome?.reason && <p className="mb-5 rounded-sm bg-muted/60 p-3 text-sm text-muted-foreground">{outcome.reason}</p>}
           {report ? (
             <article className="report text-sm leading-relaxed">
@@ -87,7 +98,9 @@ export function ReportSheet({
               </ReactMarkdown>
             </article>
           ) : (
-            <p className="text-sm text-muted-foreground">The report appears when Jesse finishes the investigation.</p>
+            <p role="status" className="text-sm text-muted-foreground">
+              {snapshot?.report_available ? "Loading the report…" : "The report appears when Jesse finishes the investigation."}
+            </p>
           )}
         </div>
       </SheetContent>

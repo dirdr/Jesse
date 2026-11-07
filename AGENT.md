@@ -1,6 +1,6 @@
 # Jesse
 
-Status: research contexts are implemented. Each lab is a folder under `contexts/` (context.toml, protocol.md, optional tools.py) loaded at runtime; the panel can pin one with `jesse-ui --context <id>`. The shipped context is the experimental ChemCollective coolant activity on the web surface; the generic runner supports web and desktop surfaces. NetLogo code was removed on 2026-11-07 at the user's request; its runs and replay-verified desktop proof (run 20261107T133143442966Z) remain in git history. Coolant live acceptance, replay review and an analysis-driven follow-up remain open.
+Status: research contexts are implemented. Each lab is a folder under `contexts/` (context.toml, protocol.md, optional tools.py) loaded at runtime; the panel can pin one with `jesse-ui --context <id>` and choose its surface with `--surface`. Shipped contexts are experimental ChemCollective coolant (web) and NetLogo Fire (desktop/web). The user approved Fire on 2026-11-07 as a new context using the generic runner. Fire interaction proofs remain pending on both surfaces; the earlier replay-verified NetLogo Enzyme Kinetics proof (run 20261107T133143442966Z) does not verify Fire. Coolant live acceptance, replay review and an analysis-driven follow-up remain open.
 
 Team constraints: three people, 24 hours until submission as of planning, with work expected to start in 8–10 hours. Plan around eight focused implementation hours.
 
@@ -12,13 +12,15 @@ Jesse is an autonomous research technician for software-based experimental inves
 
 An unknown experiment is an unknown sample or unanswered question within supported protocols and simulations. The agent may adapt measurements and move between supported activities. Findings describe the configured simulator and its assumptions.
 
-## Demo scenario
+## Demo scenarios
 
-The demo uses one bounded context: the ChemCollective engine coolant activity (`contexts/chemcollective-coolant`). Demo prompt: “Compare this new coolant with the reference, run the experiment, verify your measurements, and explain which absorbs more heat per gram for the same temperature rise.” Record volumes, temperatures, thermal assumptions and a repeat; calculate specific heat capacity and compare it with the supplied reference. The reference is a supplied constant, not a GUI trial.
+The first context is the ChemCollective engine coolant activity (`contexts/chemcollective-coolant`). Demo prompt: “Compare this new coolant with the reference, run the experiment, verify your measurements, and explain which absorbs more heat per gram for the same temperature rise.” Record volumes, temperatures, thermal assumptions and a repeat; calculate specific heat capacity and compare it with the supplied reference. The reference is a supplied constant, not a GUI trial.
+
+The second context is NetLogo Fire (`contexts/netlogo-fire`). Demo prompt: “How does tree density change how much of a forest burns? Compare 55% and 70% density and repeat both conditions.” Four fresh GUI trials compare displayed percent burned with unchanged world geometry; ticks are model steps. The context supplies the operating protocol, checked descriptive analysis and repeat comparison. Both desktop and web use the existing runner. Each surface needs its own interaction proof. Four trials cannot estimate a critical density, a crossing probability or real wildfire risk.
 
 Additional labs are added as context folders. Each remains unverified until H demonstrates its required GUI interactions. Choose tools by scientific fit; do not force unrelated simulators into one experimental chain. Findings concern the simulator, not a physical laboratory validation.
 
-Sources: https://chemcollective.org/activities/info/92 ; https://chemcollective.org/vlabs
+Sources: https://chemcollective.org/activities/info/92 ; https://chemcollective.org/vlabs ; https://ccl.northwestern.edu/netlogo/models/Fire
 
 Retain five stories: Result Detective, Protocol Reproducer, Hands-Free Technician, Adaptive Experimenter, and Experiment Handoff. Prioritize Result Detective.
 
@@ -26,7 +28,7 @@ Retain five stories: Result Detective, Protocol Reproducer, Hands-Free Technicia
 
 Q10 evolved with the user's question-routing requirement: retain one H computer-use operator and the lightweight Python controller, and add a replaceable catalogue-selection step before execution. The default selector uses PydanticAI with OpenAI; an explicit H tool-only selector is available through `--planner h`. These are alternative backends, not simultaneous planners. The full autonomous research-manager loop remains future work.
 
-The selector returns a typed proposal; Python checks the registered protocol, actual surface availability and the researcher's explicit surface preference before launching H. The model cannot choose an arbitrary executor or expand the two-trial protocol. The controller manages sessions, executes custom tools, validates records, persists state and enforces a shared selection/execution budget. H chooses GUI actions. H's runtime manages the observation, model, action and tool loop; the SDK executes custom tools in our application while processing the session.
+The selector returns a typed proposal; Python checks the registered protocol, actual surface availability and the researcher's explicit surface preference before launching H. The model cannot choose an arbitrary executor or expand the selected context's trial limit (coolant: two; Fire: four). The controller manages sessions, executes custom tools, validates records, persists state and enforces a shared selection/execution budget. H chooses GUI actions. H's runtime manages the observation, model, action and tool loop; the SDK executes custom tools in our application while processing the session.
 
 Expose tools for inspecting the approved application catalogue, recording observations, running predefined analyses, and assembling reports. Supply bounded protocols and assumptions directly in the investigation context. RAG, vector search, corpus backfill and retrieval of earlier investigations are outside the product scope.
 
@@ -114,6 +116,8 @@ The catalogue is the set of folders under `contexts/` (override with `--contexts
 Persist investigation-local settings, raw readings, units, screenshots, analysis and conclusions as ordinary files under `runs/<id>/` with stable trial identifiers: `observations/` holds raw readings, `analyses/` holds derived values. Retried identical writes are idempotent; conflicting writes and readings beyond `max_trials` are rejected. Reports link to their evidence. The panel sidebar lists past runs for replay; later investigations do not automatically retrieve or learn from them.
 
 ## Autonomy and completion
+
+Session activity, report availability and scientific outcome are independent. An answer writes the report immediately. The panel opens it once per live investigation and keeps it accessible while follow-ups are possible. An idle session with a report is `report_ready`; idle without a report is `waiting` (displayed as “Session idle”). Follow-ups can resume execution and revise the report within the original limits. Session closure preserves the report and its scientific outcome. Report fetch failures remain visible and retry even after closure. An answer alone never upgrades an inconclusive scientific outcome.
 
 Start each investigation with an evidence checklist and execution budget. Permit measurement repeats, configuration checks and adaptations within that budget.
 

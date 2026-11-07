@@ -19,9 +19,31 @@ Open http://127.0.0.1:8765, then type or speak a question:
 
 > Compare this new coolant with the reference, run the experiment, verify your measurements, and explain which absorbs more heat per gram for the same temperature rise.
 
-The panel shows the live lab screen, H's actions, the plan and each measurement. Send a correction while the session is open. The report opens when the run ends.
+The panel shows the lab screen, H's actions, the plan and each measurement. Send a correction while the session is open. The report opens as soon as it is ready, including while the session remains available for follow-ups. The report combines checked measurements with the agent's interpretation; scientific acceptance still requires replay review.
 
 `--context` sends every question to one context and skips the selector, so the demo needs no OpenAI key. Without it, Jesse asks the selector to choose among all contexts and blocks questions that none of them supports.
+
+### Two demo contexts
+
+The local launcher installs dependencies, builds the panel and opens it in your browser. Run one of these from the repository root:
+
+```sh
+# Coolant: ChemCollective in H's hosted browser
+./launch_local.sh chemcollective-coolant web
+
+# Forest fire: the installed NetLogo application on your Mac
+./launch_local.sh netlogo-fire desktop
+```
+
+For Fire, ask:
+
+> How does tree density change how much of a forest burns? Compare 55% and 70% density and repeat both conditions.
+
+Fire runs four fresh trials within a ten-minute budget and compares the displayed burned percentages. The desktop context points to NetLogo 7.0.4 under `/Applications`; adjust `contexts/netlogo-fire/context.toml` if installed elsewhere. Enable the desktop permissions described below. Both Fire surfaces remain unverified until their interaction evidence is reviewed.
+
+To use NetLogo Web instead, run `./launch_local.sh netlogo-fire web`. To keep two panels open, give the second one another port: `PORT=8766 ./launch_local.sh netlogo-fire desktop`. Each desktop investigation needs exclusive control of your mouse and keyboard.
+
+If dependencies and the UI build are already present, launch directly with `uv run --env-file .env jesse-ui --context netlogo-fire --surface desktop`. Stop the current panel with Ctrl+C before reusing its port.
 
 ## Past investigations
 
@@ -48,7 +70,7 @@ uv run --env-file .env jesse-ui --context my-lab
 | `protocol.md` | Step-by-step instructions H follows inside the lab |
 | `tools.py` | Optional Python tools for this lab, such as a calculation |
 
-[`contexts/chemcollective-coolant`](contexts/chemcollective-coolant) is a complete example.
+[`contexts/chemcollective-coolant`](contexts/chemcollective-coolant) and [`contexts/netlogo-fire`](contexts/netlogo-fire) are complete examples.
 
 ### context.toml
 
@@ -83,7 +105,7 @@ Declare one or both.
 - **Web**: H opens `start_url` in a hosted browser. Your mouse stays free. Nothing is installed locally.
 - **Desktop**: H controls your Mac through the SDK's local bridge (`host = "user_device"`). Install the application first. In **System Settings → Privacy & Security**, enable **Screen & System Audio Recording** and **Accessibility** for the terminal that runs Jesse, then restart it. Keep your hands off the mouse during the run; press **Esc** twice to stop H.
 
-With both declared, Jesse prefers web. Force one with `--surface web` or `--surface desktop` on the `jesse` command.
+With both declared, Jesse prefers web. Force one with `--surface web` or `--surface desktop` on either `jesse` or `jesse-ui`.
 
 ### Tools
 
@@ -123,7 +145,7 @@ uv run --env-file .env jesse "question" --plan-only            # choose a contex
 uv run --env-file .env jesse "question" --planner h            # choose with H instead of OpenAI
 ```
 
-Each run writes `runs/<id>/`: the question, selection, H events, raw observations, analyses and `report.md`. Reports stay **inconclusive** until a person reviews the replay; **blocked** means a required capability or reading was missing.
+Each run writes `runs/<id>/`: the question, selection, H events, raw observations, analyses and `report.md`. A context's checked completion criteria can produce a **supported conclusion**, with replay review still pending. Fire remains **inconclusive** pending review; **blocked** means a required capability or reading was missing.
 
 ## Architecture
 

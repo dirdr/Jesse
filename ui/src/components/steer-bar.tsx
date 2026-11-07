@@ -1,6 +1,7 @@
 import { useState } from "react"
-import { CornerDownLeft, Loader2, MessageSquareWarning } from "lucide-react"
+import { CornerDownLeft, MessageSquareWarning } from "lucide-react"
 import { Button } from "@/components/ui/button"
+import { Spinner } from "@/components/ui/spinner"
 
 export function SteerBar({ enabled, busy, onSend }: { enabled: boolean; busy: boolean; onSend: (text: string) => Promise<boolean> }) {
   const [text, setText] = useState("")
@@ -30,7 +31,7 @@ export function SteerBar({ enabled, busy, onSend }: { enabled: boolean; busy: bo
         className="min-w-0 flex-1 bg-transparent py-1.5 text-sm outline-none placeholder:text-muted-foreground disabled:cursor-not-allowed"
       />
       <Button type="submit" size="sm" variant="secondary" disabled={!enabled || busy || !text.trim()}>
-        {busy ? <Loader2 className="animate-spin" /> : <CornerDownLeft />} Send
+        {busy ? <Spinner /> : <CornerDownLeft />} Send
       </Button>
     </form>
   )

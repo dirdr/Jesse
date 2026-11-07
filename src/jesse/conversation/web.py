@@ -227,6 +227,7 @@ def main(argv=None):
     parser = argparse.ArgumentParser(description=__doc__)
     parser.add_argument("--port", type=int, default=8765)
     parser.add_argument("--context", help="Run every question in this research context, without the selector")
+    parser.add_argument("--surface", choices=("auto", "web", "desktop"), default="auto", help="Execution surface for new investigations")
     parser.add_argument("--contexts", type=Path, help="Folder of research contexts (default: ./contexts or JESSE_CONTEXTS_DIR)")
     parser.add_argument("--runs", type=Path, default=Path("runs"), help="Folder for investigations and history (default: ./runs)")
     args = parser.parse_args(argv)
@@ -241,7 +242,7 @@ def main(argv=None):
     if args.context and args.context not in {item.id for item in available}:
         parser.error(f"Unknown research context {args.context!r}; available: {', '.join(item.id for item in available)}")
     import uvicorn
-    manager = RunManager(args.runs, context=args.context, contexts=args.contexts)
+    manager = RunManager(args.runs, context=args.context, contexts=args.contexts, surface=args.surface)
     scope = f"context {args.context}" if args.context else f"{len(available)} research contexts"
     print(f"Open Jesse at http://127.0.0.1:{args.port} ({scope}). H Agent View opens from the panel.", flush=True)
     uvicorn.run(create_app(manager), host="127.0.0.1", port=args.port, log_level="warning")
