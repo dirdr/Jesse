@@ -1,4 +1,10 @@
 import { useEffect, useState } from "react"
+import { PanelLeft } from "lucide-react"
+import { Button } from "@/components/ui/button"
+import { Sheet, SheetContent, SheetTitle } from "@/components/ui/sheet"
+import { SidebarContent } from "@/components/sidebar"
+import { useHistory } from "@/lib/use-history"
+import type { RunSummary } from "@/lib/api"
 import { Toaster } from "@/components/ui/sonner"
 import { TooltipProvider } from "@/components/ui/tooltip"
 import { Header } from "@/components/header"
@@ -22,6 +28,8 @@ export default function App() {
   const mic = <VoiceButton state={voice.state} onToggle={voice.toggle} />
   const [pinned, setPinned] = useState<number | null>(null)
   const [reportOpen, setReportOpen] = useState(false)
+  const [menuOpen, setMenuOpen] = useState(false)
+  const history = useHistory(`${run.runId}:${run.snapshot?.status ?? ""}`)
   const hasRun = run.runId !== null
   const live = run.live
   const snapshot = run.snapshot
@@ -32,58 +40,94 @@ export default function App() {
     setReportOpen(false)
   }, [run.runId])
 
+  const openRun = (summary: RunSummary) => {
+    const replay = !summary.active
+    window.history.replaceState(null, "", replay ? `?run=${encodeURIComponent(summary.run_id)}` : window.location.pathname)
+    run.attach(summary.run_id, replay)
+    setMenuOpen(false)
+  }
+  const newRun = () => {
+    run.reset()
+    setMenuOpen(false)
+  }
+  const sidebar = (
+    <SidebarContent
+      runs={history.runs}
+      contexts={history.contexts}
+      pinned={history.pinned}
+      selectedId={run.runId}
+      onOpen={openRun}
+      onNew={newRun}
+    />
+  )
+  const menu = (
+    <Button variant="ghost" size="icon" className="lg:hidden" onClick={() => setMenuOpen(true)} aria-label="Past investigations">
+      <PanelLeft />
+    </Button>
+  )
+
   return (
     <TooltipProvider delayDuration={300}>
-      <div className="flex min-h-full flex-col">
-        <Header
-          snapshot={snapshot}
-          hasRun={hasRun}
-          replay={run.replay}
-          reportReady={Boolean(run.report)}
-          onStop={run.stop}
-          onNew={run.reset}
-          onReport={() => setReportOpen(true)}
-          mic={hasRun ? mic : null}
-          speech={speech}
-        />
+      <div className="flex min-h-full">
+        <aside className="sticky top-0 hidden h-screen w-72 shrink-0 border-r border-sidebar-border lg:block">{sidebar}</aside>
+        <Sheet open={menuOpen} onOpenChange={setMenuOpen}>
+          <SheetContent side="left" className="w-80 p-0">
+            <SheetTitle className="sr-only">Past investigations</SheetTitle>
+            {sidebar}
+          </SheetContent>
+        </Sheet>
+        <div className="flex min-h-full min-w-0 flex-1 flex-col">
+          <Header
+            snapshot={snapshot}
+            hasRun={hasRun}
+            replay={run.replay}
+            reportReady={Boolean(run.report)}
+            onStop={run.stop}
+            onNew={newRun}
+            onReport={() => setReportOpen(true)}
+            mic={hasRun ? mic : null}
+            speech={speech}
+            menu={menu}
+          />
 
-        {!hasRun ? (
-          <main className="flex flex-1 px-4 sm:px-6">
-            <Launcher busy={run.busy} onStart={run.start} mic={mic} />
-          </main>
-        ) : (
-          <main className="mx-auto grid w-full max-w-[1600px] flex-1 grid-cols-1 gap-5 px-4 py-5 sm:px-6 xl:grid-cols-[minmax(0,1fr)_400px]">
-            <div className="flex min-w-0 flex-col gap-4">
-              <LiveScreen
-                runId={run.runId!}
-                frames={live?.frames ?? []}
-                actions={live?.actions ?? []}
-                active={Boolean(snapshot?.active)}
-                replay={run.replay}
-                pinned={pinned}
-                onPin={setPinned}
-              />
-              {finished && snapshot?.outcome ? (
-                <div className="flex flex-wrap items-center gap-3 rounded-2xl border border-border/70 bg-card/70 px-4 py-3 backdrop-blur">
-                  <OutcomeBadge outcome={snapshot.outcome.outcome} />
-                  <span className="flex-1" />
-                  {run.report && (
-                    <button type="button" onClick={() => setReportOpen(true)} className="text-sm font-medium text-brand hover:underline">
-                      Read the report
-                    </button>
-                  )}
-                </div>
-              ) : (
-                !run.replay && <SteerBar enabled={Boolean(snapshot?.can_message)} busy={run.busy} onSend={(text) => run.steer(text)} />
-              )}
-            </div>
+          {!hasRun ? (
+            <main className="flex flex-1 px-4 sm:px-6">
+              <Launcher busy={run.busy} onStart={run.start} mic={mic} contexts={history.contexts} />
+            </main>
+          ) : (
+            <main className="mx-auto grid w-full max-w-[1600px] flex-1 grid-cols-1 gap-5 px-4 py-5 sm:px-6 xl:grid-cols-[minmax(0,1fr)_400px]">
+              <div className="flex min-w-0 flex-col gap-4">
+                <LiveScreen
+                  runId={run.runId!}
+                  frames={live?.frames ?? []}
+                  actions={live?.actions ?? []}
+                  active={Boolean(snapshot?.active)}
+                  replay={run.replay}
+                  pinned={pinned}
+                  onPin={setPinned}
+                />
+                {finished && snapshot?.outcome ? (
+                  <div className="flex flex-wrap items-center gap-3 rounded-2xl border border-border/70 bg-card/70 px-4 py-3 backdrop-blur">
+                    <OutcomeBadge outcome={snapshot.outcome.outcome} />
+                    <span className="flex-1" />
+                    {run.report && (
+                      <button type="button" onClick={() => setReportOpen(true)} className="text-sm font-medium text-brand hover:underline">
+                        Read the report
+                      </button>
+                    )}
+                  </div>
+                ) : (
+                  !run.replay && <SteerBar enabled={Boolean(snapshot?.can_message)} busy={run.busy} onSend={(text) => run.steer(text)} />
+                )}
+              </div>
 
-            <aside className="flex min-w-0 flex-col gap-4 xl:sticky xl:top-[4.5rem] xl:max-h-[calc(100vh-5.5rem)]">
-              <PlanPanel plan={live?.plan ?? []} />
-              <MeasurementsPanel measurements={live?.measurements ?? []} />
-            </aside>
-          </main>
-        )}
+              <aside className="flex min-w-0 flex-col gap-4 xl:sticky xl:top-[4.5rem] xl:max-h-[calc(100vh-5.5rem)]">
+                <PlanPanel plan={live?.plan ?? []} />
+                <MeasurementsPanel measurements={live?.measurements ?? []} />
+              </aside>
+            </main>
+          )}
+        </div>
       </div>
       <TranscriptPill state={voice.state} />
       <ReportSheet open={reportOpen} onOpenChange={setReportOpen} snapshot={snapshot} report={run.report} />

@@ -1,6 +1,8 @@
 ![Jesse](jesse.png)
 
-Jesse is a personal lab assistant. a research intern (“stagiaire”) that uses computer use to conduct experiments in web and desktop scientific software and work with Python, Excel, and the tools that you use as a researcher.
+Jesse is a lab assistant, a research intern (“stagiaire”), that uses computer use to run experiments in web and desktop scientific software.
+
+You ask a question. Jesse picks a research context, an H agent operates the lab software, Python records each reading, and Jesse writes an evidence-linked report.
 
 ## Try it
 
@@ -9,76 +11,167 @@ Requires [uv](https://docs.astral.sh/uv/) and an H API key.
 ```sh
 uv sync
 cp .env.example .env  # Only if .env does not already exist.
-# Set HAI_API_KEY in .env.
-uv run --env-file .env jesse-netlogo --surface web --timeout 300
+# Set HAI_API_KEY in .env. Add OPENAI_API_KEY for automatic context selection, GLADIA_API_KEY for voice.
+uv run --env-file .env jesse-ui --context chemcollective-coolant
 ```
 
-Open the printed **Agent View URL** to watch live. The current test runs NetLogo Enzyme Kinetics; evidence and reports are saved under `runs/`. See [run instructions](DESKTOP_TEST.md) for desktop setup and permissions.
+Open http://127.0.0.1:8765, then type or speak a question:
 
-To preview spoken questions through Gladia and the Pydantic AI selector without
-starting H, see [live voice setup](docs/LIVE_VOICE.md).
+> Compare this new coolant with the reference, run the experiment, verify your measurements, and explain which absorbs more heat per gram for the same temperature rise.
+
+The panel shows the live lab screen, H's actions, the plan and each measurement. Send a correction while the session is open. The report opens when the run ends.
+
+`--context` sends every question to one context and skips the selector, so the demo needs no OpenAI key. Without it, Jesse asks the selector to choose among all contexts and blocks questions that none of them supports.
+
+## Past investigations
+
+The left sidebar lists every investigation in `runs/`, newest first. Click one to replay its screens, measurements and report. Use `--runs <folder>` to keep a separate history, for example one per demo.
+
+## Voice
+
+Set `GLADIA_API_KEY` in `.env` and press the microphone button. The first spoken turn starts an investigation; later turns reach the running session as corrections. macOS asks the terminal for microphone access. See [live voice setup](docs/LIVE_VOICE.md) for the noise gate and the terminal preview.
+
+## Add a research context
+
+A research context is one folder in `contexts/`. Jesse loads every folder at startup; names starting with `_` are skipped.
+
+```sh
+cp -r contexts/_template contexts/my-lab
+# Edit context.toml and protocol.md, then check that Jesse reads it:
+uv run jesse --catalogue
+uv run --env-file .env jesse-ui --context my-lab
+```
+
+| File | Purpose |
+| --- | --- |
+| `context.toml` | What the lab answers, where it runs, which tools H gets, and its limits |
+| `protocol.md` | Step-by-step instructions H follows inside the lab |
+| `tools.py` | Optional Python tools for this lab, such as a calculation |
+
+[`contexts/chemcollective-coolant`](contexts/chemcollective-coolant) is a complete example.
+
+### context.toml
+
+```toml
+id = "my-lab"                       # lowercase letters, digits, hyphens
+title = "What this lab measures"
+application = "Name of the software"
+questions = ["A question this lab answers."]
+unsupported = ["A question it must refuse."]
+assumptions = ["Simulator findings only"]
+sources = ["https://example.org/docs"]
+tools = ["publish_update", "acknowledge_researcher_message", "record_observation"]
+
+[surfaces.web]                      # H's hosted browser
+start_url = "https://example.org/lab"
+
+[surfaces.desktop]                  # your own computer
+app_path = "/Applications/MyLab.app"
+
+[limits]
+budget_seconds = 600                # at most 600
+max_steps = 110
+max_trials = 2
+```
+
+The selector reads `questions`, `unsupported` and `status` to decide whether a question fits. Write them as a researcher would ask.
+
+### Surfaces: web and desktop
+
+Declare one or both.
+
+- **Web**: H opens `start_url` in a hosted browser. Your mouse stays free. Nothing is installed locally.
+- **Desktop**: H controls your Mac through the SDK's local bridge (`host = "user_device"`). Install the application first. In **System Settings → Privacy & Security**, enable **Screen & System Audio Recording** and **Accessibility** for the terminal that runs Jesse, then restart it. Keep your hands off the mouse during the run; press **Esc** twice to stop H.
+
+With both declared, Jesse prefers web. Force one with `--surface web` or `--surface desktop` on the `jesse` command.
+
+### Tools
+
+H calls tools to report progress and save readings; Python validates every call.
+
+Built-in tools, enabled by name in `tools`:
+
+| Tool | What H does with it |
+| --- | --- |
+| `publish_update` | Tells the researcher the plan, a finding, a follow-up or a blocker |
+| `acknowledge_researcher_message` | Answers a correction sent from the panel or by voice |
+| `record_observation` | Saves displayed values, units, raw text and evidence for one trial |
+
+For lab-specific work, add `tools.py`. Jesse calls `tools(lab)` and gives H every function it returns. H sees each function's name, typed arguments and docstring, so write the docstring as an instruction.
+
+```python
+def tools(lab):
+    def record_measurement(trial_id: str, value: float, unit: str, raw_reading: str, evidence: list[str]) -> dict:
+        """Save one displayed value with its unit, raw text and screenshot evidence."""
+        return lab.record(trial_id, {"value": value, "unit": unit, "raw_reading": raw_reading, "evidence": evidence},
+                          fields={"Value": f"{value:g} {unit}"}, summary=f"Saved {trial_id}: {value:g} {unit}.")
+    return [record_measurement]
+
+
+def report(lab):
+    return "## Summary\n\n" + f"{len(lab.observations())} trial(s) recorded."
+```
+
+`lab.record` saves the raw reading once, rejects conflicting retries, enforces `max_trials`, and stores any `analysis` dictionary separately from the raw reading. `fields` and `result` appear in the panel's measurement list. The optional `report(lab)` adds a section to `report.md`. `tools.py` runs as ordinary Python on your machine, so treat it like any other code you install.
+
+## Command line
+
+```sh
+uv run jesse --catalogue                                       # list contexts
+uv run --env-file .env jesse "question" --context my-lab       # run one context
+uv run --env-file .env jesse "question" --plan-only            # choose a context, run nothing
+uv run --env-file .env jesse "question" --planner h            # choose with H instead of OpenAI
+```
+
+Each run writes `runs/<id>/`: the question, selection, H events, raw observations, analyses and `report.md`. Reports stay **inconclusive** until a person reviews the replay; **blocked** means a required capability or reading was missing.
 
 ## Architecture
 
-Python manages sessions, budgets, records, and reports. One hosted H agent operates the selected interface. Solid arrows show implemented paths; dashed arrows show planned capabilities. Native interaction still requires permission and verification.
+Python owns sessions, budgets, tools and records. One hosted H agent operates the lab. Solid arrows show implemented paths; dashed arrows show planned ones.
 
 ```mermaid
 flowchart TB
     U["Researcher"]
-    G["Gladia transcription<br/>Live preview"]
-    P["Catalogue selector<br/>Pydantic AI"]
+    G["Gladia transcription"]
     T["Speech output<br/>Provider to be chosen"]
 
     subgraph LOCAL["Jesse - local Python application"]
+        X["Research contexts<br/>contexts/&lt;id&gt;/"]
+        P["Context selector<br/>OpenAI or H, or pinned"]
         C["Controller<br/>Preflight, sessions, budgets and cancellation"]
-        I["Agent context<br/>Personality and experiment protocol"]
-        R["Observation recording<br/>Validation and idempotent writes"]
-        A["Scientific analysis<br/>Predefined Python methods - planned"]
-        F[("Investigation files<br/>Settings, readings, events and metrics")]
+        K["Tools<br/>Built-in and tools.py"]
+        F[("Investigation files<br/>runs/&lt;id&gt;/")]
         O["Markdown report<br/>Outcome, limitations and evidence links"]
+        Y["Panel<br/>Live view and history"]
     end
 
     subgraph HAPI["H managed runtime"]
         H["One H agent<br/>Observe, reason, act and request tools"]
-        W["Hosted visual browser<br/>NetLogo Web"]
+        W["Hosted visual browser"]
         V["Agent View<br/>Live observation and replay"]
     end
 
-    D["Local desktop connection<br/>NetLogo Desktop - permission required"]
+    D["Local desktop<br/>user_device bridge"]
 
-    U -->|"Start text-driven run"| C
-    U -->|"Speak a question"| G
-    G -->|"Final turn: optional plan-only selection"| P
-    G -.->|"Future active-run correction"| C
-    I -->|"Supply behavior and protocol"| C
+    U -->|"Type a question or correction"| Y
+    U -->|"Speak"| G
+    G -->|"Final turn"| Y
+    Y -->|"Start or steer a run"| C
+    X -->|"Questions, surfaces, limits"| P
+    P -->|"Validated context"| C
+    X -->|"Protocol and tools"| C
     C -->|"Start session and return tool results"| H
-    H -->|"Stream events and request observation writes"| C
+    H -->|"Stream events and call tools"| K
+    K -->|"Validated readings"| F
     H -->|"Operate visible controls"| W
-    W -->|"Return screen observations"| H
     H -->|"Operate mouse and keyboard"| D
-    D -->|"Return screenshots"| H
-    C -->|"Record raw readings"| R
-    R -->|"Persist validated observations"| F
-    C -->|"Persist session events and metrics"| F
-    C -.->|"Submit comparable measurements"| A
-    A -.->|"Return results for H to choose a follow-up"| C
-    C -->|"Write outcome and verification status"| O
-    F -->|"Supply traceable evidence"| O
+    C -->|"Write outcome"| O
+    F -->|"Traceable evidence"| O
+    F -->|"History and replay"| Y
     H -->|"Expose session events"| V
     U -->|"Watch live or replay"| V
-    O -->|"Present findings for review"| U
     C -.->|"Send brief progress updates"| T
     T -.->|"Speak updates"| U
 ```
 
-## Example scenarios
-
-Proposed experiments to test next; these are not selectable in the current runner.
-
-| Scenario                | Research question                                                | Software and measurements                                                                                                                                              |
-| ----------------------- | ---------------------------------------------------------------- | ---------------------------------------------------------------------------------------------------------------------------------------------------------------------- |
-| Fix city congestion     | Which traffic-light timing reduces waiting without adding roads? | [NetLogo Traffic Grid](https://ccl.northwestern.edu/netlogo/models/TrafficGrid): compare waiting time and speed at fixed traffic demand.                               |
-| Investigate fire spread | How does forest density affect the spread of a fire?             | [NetLogo Fire](https://ccl.northwestern.edu/netlogo/models/Fire): vary density and repeat trials to compare the fraction burned.                                       |
-| Test a new coolant      | Does this coolant absorb more heat than the reference?           | [ChemCollective coolant activity](https://chemcollective.org/activities/info/92): record masses and temperatures, calculate heat capacity, and repeat the measurement. |
-
-Each scenario needs its own protocol and GUI interaction test. Findings describe the simulator and its assumptions.
+Findings describe the configured simulator and its assumptions, not a physical laboratory.

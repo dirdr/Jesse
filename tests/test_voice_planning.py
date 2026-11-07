@@ -9,19 +9,19 @@ import types
 import unittest
 from unittest.mock import patch
 
-from jesse.selecting.domain import CATALOGUE
+from context_fixtures import CATALOGUE
 from jesse.voice.live import main
 from jesse.voice.planning import VoicePlanningQueue
 
 
 class VoicePlanningTests(unittest.TestCase):
     def test_completed_voice_turn_reaches_existing_pydantic_selector(self):
-        from jesse.experiments.netlogo.preflight import Check
+        from jesse.preflight import Check
         from jesse.selecting.adapters import PlannerOutput
         from pydantic_ai.usage import RunUsage
 
         output = PlannerOutput(
-            decision="select", experiment_id=CATALOGUE[0].experiment_id,
+            decision="select", experiment_id=CATALOGUE[0].id,
             surface="web", reason="A bounded rate comparison is supported.",
         )
         response = types.SimpleNamespace(output=output, usage=RunUsage())
@@ -32,8 +32,8 @@ class VoicePlanningTests(unittest.TestCase):
             devices.append(input_device)
             on_turn("Does more substrate change the reaction rate?")
 
-        def check(explicit, surface):
-            return [Check("test", surface == "web", "synthetic")], None
+        def check(surface, application=None):
+            return [Check("test", surface == "web", "synthetic")]
 
         sounddevice = types.SimpleNamespace(
             query_devices=lambda *args, **kwargs: {"name": "synthetic microphone"}, RawInputStream=object,
@@ -46,9 +46,9 @@ class VoicePlanningTests(unittest.TestCase):
                 with patch.dict(os.environ, {"GLADIA_API_KEY": "test", "OPENAI_API_KEY": "test"}):
                     with patch.dict(sys.modules, {"sounddevice": sounddevice}):
                         with patch("jesse.voice.live.run_live_preview", side_effect=capture):
-                            with patch("jesse.selecting.cli.check_desktop", side_effect=check):
+                            with patch("jesse.selecting.cli.check_surface", side_effect=check), patch("jesse.selecting.cli.load_contexts", return_value=CATALOGUE):
                                 with patch("pydantic_ai.Agent.run_sync", return_value=response) as model:
-                                    with patch("jesse.selecting.cli.run_ready_experiment") as execute:
+                                    with patch("jesse.selecting.cli.run_investigation") as execute:
                                         with contextlib.redirect_stdout(io.StringIO()):
                                             self.assertEqual(main(["--plan", "--input-device", "7"]), 0)
                 self.assertEqual(devices, [7])

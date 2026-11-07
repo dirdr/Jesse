@@ -13,32 +13,19 @@ class Check:
     detail: str
 
 
-def find_netlogo(explicit: Path | None = None) -> Path | None:
-    if explicit is not None:
-        path = explicit.expanduser().resolve()
-        return path if path.is_dir() and path.suffix == ".app" else None
-    for root in (Path("/Applications"), Path.home() / "Applications"):
-        if not root.exists():
-            continue
-        for pattern in ("*NetLogo*.app", "*NetLogo*/*NetLogo*.app"):
-            for path in sorted(root.glob(pattern)):
-                if "3d" not in path.name.lower():
-                    return path
-    return None
-
-
-def check_desktop(explicit: Path | None = None, surface: str = "desktop") -> tuple[list[Check], Path | None]:
-    application = find_netlogo(explicit)
+def check_surface(surface: str, application: Path | None = None) -> list[Check]:
     checks = [
         Check("credentials", bool(os.environ.get("HAI_API_KEY", "").strip()), "HAI_API_KEY must be supplied through the environment; its value is never printed."),
         Check("sdk", importlib.util.find_spec("hai_agents") is not None, "Install project dependencies with uv sync."),
     ]
     if surface == "web":
-        return checks, None
-    checks.append(Check("netlogo", application is not None, str(application) if application else "NetLogo Desktop not found; install it or pass --netlogo /path/to/NetLogo.app."))
+        return checks
+    if application is not None:
+        path = application.expanduser()
+        checks.append(Check("application", path.exists(), str(path) if path.exists() else f"{path} not found; install it or fix app_path in context.toml."))
     if sys.platform != "darwin":
-        checks.append(Check("desktop_permissions", False, "This feasibility runner currently verifies macOS permissions only."))
-        return checks, application
+        checks.append(Check("desktop_permissions", False, "Desktop runs currently verify macOS permissions only."))
+        return checks
     try:
         import Quartz
         from ApplicationServices import AXIsProcessTrusted
@@ -48,7 +35,7 @@ def check_desktop(explicit: Path | None = None, surface: str = "desktop") -> tup
         ])
     except ImportError:
         checks.append(Check("desktop_permissions", False, "Desktop permission checks require the SDK desktop dependencies; run uv sync."))
-    return checks, application
+    return checks
 
 
 def checks_payload(checks: list[Check]) -> dict:

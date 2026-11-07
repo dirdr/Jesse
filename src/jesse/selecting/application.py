@@ -1,15 +1,15 @@
 """Ask a planner to route a question, then enforce catalogue boundaries."""
 from typing import Protocol
 
-from .domain import ExperimentDefinition, Proposal, Selection, validate_selection
+from .domain import ResearchContext, Proposal, Selection, validate_selection
 
 
 class ExperimentPlanner(Protocol):
-    def propose(self, question: str, catalogue: tuple[ExperimentDefinition, ...], available_surfaces: set[str], requested_surface: str) -> Proposal: ...
+    def propose(self, question: str, catalogue: tuple[ResearchContext, ...], available_surfaces: set[str], requested_surface: str) -> Proposal: ...
 
 
 def select_experiment(
-    question: str, catalogue: tuple[ExperimentDefinition, ...], available_surfaces: set[str],
+    question: str, catalogue: tuple[ResearchContext, ...], available_surfaces: set[str],
     planner: ExperimentPlanner, requested_surface: str = "auto",
 ) -> Selection:
     question = question.strip()

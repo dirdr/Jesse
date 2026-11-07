@@ -11,10 +11,11 @@ from fastapi.staticfiles import StaticFiles
 from pydantic import BaseModel, Field
 from typing import Literal
 
+from jesse.contexts import ContextError, load_contexts
 from .application import RunManager
 from .live import cached_frame, live_state
 from .speech import cached_action_speech, cached_speech, cached_step_speech, speech_available
-from .voice import VoiceListener
+from .voice import VoiceListener, voice_unavailable
 
 
 class ResearchQuestion(BaseModel):
@@ -28,7 +29,7 @@ class ResearcherMessage(ResearchQuestion):
 
 def create_app(manager: RunManager | None = None, voice: VoiceListener | None = None) -> FastAPI:
     manager = manager or RunManager(Path("runs"))
-    voice = voice or VoiceListener(manager)
+    voice = voice or VoiceListener(manager, unavailable=lambda: voice_unavailable(needs_planner=manager.context is None))
     token = secrets.token_urlsafe(32)
 
     @asynccontextmanager
@@ -60,6 +61,20 @@ def create_app(manager: RunManager | None = None, voice: VoiceListener | None = 
     @app.get("/", response_class=HTMLResponse)
     def index():
         return (assets / "index.html").read_text(encoding="utf-8").replace("__JESSE_TOKEN__", token)
+
+    @app.get("/api/contexts")
+    def contexts():
+        try:
+            items = load_contexts(manager.contexts)
+        except ContextError as error:
+            raise HTTPException(500, str(error)) from None
+        if manager.context:
+            items = tuple(item for item in items if item.id == manager.context)
+        return {"pinned": manager.context, "contexts": [item.to_dict() for item in items]}
+
+    @app.get("/api/runs")
+    def history():
+        return {"runs": manager.history()}
 
     @app.get("/api/current")
     def current():
@@ -183,12 +198,25 @@ def create_app(manager: RunManager | None = None, voice: VoiceListener | None = 
 def main(argv=None):
     parser = argparse.ArgumentParser(description=__doc__)
     parser.add_argument("--port", type=int, default=8765)
+    parser.add_argument("--context", help="Run every question in this research context, without the selector")
+    parser.add_argument("--contexts", type=Path, help="Folder of research contexts (default: ./contexts or JESSE_CONTEXTS_DIR)")
+    parser.add_argument("--runs", type=Path, default=Path("runs"), help="Folder for investigations and history (default: ./runs)")
     args = parser.parse_args(argv)
     if not 1024 <= args.port <= 65535:
         parser.error("Use a port between 1024 and 65535")
+    try:
+        available = load_contexts(args.contexts)
+    except ContextError as error:
+        parser.error(str(error))
+    if not available:
+        parser.error(f"No research contexts found in {args.contexts or 'contexts'}; see contexts/README.md")
+    if args.context and args.context not in {item.id for item in available}:
+        parser.error(f"Unknown research context {args.context!r}; available: {', '.join(item.id for item in available)}")
     import uvicorn
-    print(f"Open Jesse at http://127.0.0.1:{args.port}. H Agent View opens from the panel.", flush=True)
-    uvicorn.run(create_app(), host="127.0.0.1", port=args.port, log_level="warning")
+    manager = RunManager(args.runs, context=args.context, contexts=args.contexts)
+    scope = f"context {args.context}" if args.context else f"{len(available)} research contexts"
+    print(f"Open Jesse at http://127.0.0.1:{args.port} ({scope}). H Agent View opens from the panel.", flush=True)
+    uvicorn.run(create_app(manager), host="127.0.0.1", port=args.port, log_level="warning")
 
 
 if __name__ == "__main__":

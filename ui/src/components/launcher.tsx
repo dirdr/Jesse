@@ -1,24 +1,25 @@
 import { useState, type ReactNode } from "react"
 import { motion } from "motion/react"
-import { ArrowRight, FlaskConical, Loader2, Thermometer } from "lucide-react"
+import { ArrowRight, FlaskConical, Globe, Loader2, Monitor } from "lucide-react"
 import { Button } from "@/components/ui/button"
 import { Logo } from "@/components/logo"
+import type { ResearchContext } from "@/lib/api"
 
-const EXPERIMENTS = [
-  {
-    question: "Can this coolant absorb more heat than the reference coolant?",
-    tool: "ChemCollective",
-    icon: Thermometer,
-  },
-  {
-    question: "Does adding more substrate make an enzyme reaction faster?",
-    tool: "NetLogo Enzyme Kinetics",
-    icon: FlaskConical,
-  },
-]
-
-export function Launcher({ busy, onStart, mic }: { busy: boolean; onStart: (question: string) => Promise<boolean>; mic: ReactNode }) {
+export function Launcher({
+  busy,
+  onStart,
+  mic,
+  contexts,
+}: {
+  busy: boolean
+  onStart: (question: string) => Promise<boolean>
+  mic: ReactNode
+  contexts: ResearchContext[]
+}) {
   const [question, setQuestion] = useState("")
+  const suggestions = contexts.flatMap((context) =>
+    context.supported_questions.slice(0, contexts.length > 1 ? 1 : 2).map((example) => ({ example, context })),
+  )
   const submit = () => {
     if (!busy && question.trim()) void onStart(question)
   }
@@ -59,7 +60,7 @@ export function Launcher({ busy, onStart, mic }: { busy: boolean; onStart: (ques
       </form>
 
       <div className="mt-6 grid gap-3 sm:grid-cols-2">
-        {EXPERIMENTS.map(({ question: example, tool, icon: Icon }) => (
+        {suggestions.map(({ example, context }) => (
           <button
             key={example}
             type="button"
@@ -67,10 +68,14 @@ export function Launcher({ busy, onStart, mic }: { busy: boolean; onStart: (ques
             className="group flex items-start gap-3 rounded-2xl border border-border/70 bg-card/60 p-4 text-left backdrop-blur transition hover:-translate-y-0.5 hover:border-brand/40 hover:shadow-xl hover:shadow-brand/10"
           >
             <span className="grid size-9 shrink-0 place-items-center rounded-xl bg-brand/10 text-brand">
-              <Icon className="size-4.5" />
+              <FlaskConical className="size-4.5" />
             </span>
             <span className="flex min-w-0 flex-col gap-1">
-              <span className="text-xs font-medium text-muted-foreground">{tool}</span>
+              <span className="flex items-center gap-1.5 text-xs font-medium text-muted-foreground">
+                {context.application} · {context.title}
+                {context.surfaces.includes("web") && <Globe className="size-3" aria-label="Web" />}
+                {context.surfaces.includes("desktop") && <Monitor className="size-3" aria-label="Desktop" />}
+              </span>
               <span className="text-sm leading-snug font-medium">{example}</span>
             </span>
           </button>

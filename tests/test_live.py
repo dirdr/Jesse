@@ -39,19 +39,20 @@ class LiveViewTests(unittest.TestCase):
             self.assertEqual(state["steps"], 3)
             self.assertNotIn("PRIVATE", json.dumps(state))
 
-    def test_measurements_from_both_experiment_formats(self):
+    def test_measurements_from_display_and_legacy_coolant_formats(self):
         with tempfile.TemporaryDirectory() as directory:
             folder = Path(directory)
             (folder / "observations").mkdir()
             (folder / "observations" / "t1.json").write_text(json.dumps({
-                "trial_id": "t1", "observed_at": "2026-11-07T12:00:00Z", "settings": {"VOLUME": 50},
-                "value": 1.0, "unit": "synthetic unit", "status": "observed"}))
+                "trial_id": "t1", "recorded_at": "2026-11-07T12:00:00Z", "reading": {"x": 1.0},
+                "display": {"fields": {"x": "1.0 synthetic unit"}, "result": "2.0 derived", "status": "estimated"}}))
             (folder / "observations" / "c1.json").write_text(json.dumps({
                 "recorded_at": "2026-11-07T12:00:00Z", "reading": {"trial_id": "c1", "coolant_volume_ml": 10,
                 "coolant_initial_c": 20, "water_volume_ml": 20, "water_initial_c": 80, "final_c": 50}}))
             (folder / "analysis-c1.json").write_text(json.dumps({"status": "estimated", "specific_heat_j_g_c": 1.5}))
             rows = {row["id"]: row for row in live_state(folder)["measurements"]}
-            self.assertEqual(rows["t1"]["result"], "V = 1.0 synthetic unit")
+            self.assertEqual(rows["t1"]["result"], "2.0 derived")
+            self.assertEqual(rows["t1"]["fields"], {"x": "1.0 synthetic unit"})
             self.assertEqual(rows["c1"]["result"], "1.500 J/(g·°C)")
 
     def test_frames_are_fetched_once_and_only_from_h_hosts(self):

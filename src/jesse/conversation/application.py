@@ -7,6 +7,7 @@ import signal
 import subprocess
 import sys
 import threading
+from datetime import datetime, timezone
 from uuid import uuid4
 
 from jesse.runtime import conversation_event, save_json
@@ -19,9 +20,32 @@ def read_json(path: Path, default=None):
         return default
 
 
+RUN_ID = re.compile(r"[A-Za-z0-9][A-Za-z0-9_-]{0,79}")
+MAX_HISTORY = 100
+
+
+def run_summary(folder: Path) -> dict | None:
+    request = read_json(folder / "request.json") or read_json(folder / "run.json")
+    if not isinstance(request, dict) or not request.get("question"):
+        return None
+    run = read_json(folder / "run.json", {}) or {}
+    selection = read_json(folder / "selection.json", {}) or {}
+    outcome = read_json(folder / "outcome.json", {}) or {}
+    started = request.get("started_at")
+    if not started:
+        started = datetime.fromtimestamp((folder / "request.json" if (folder / "request.json").exists() else folder).stat().st_mtime, timezone.utc).isoformat()
+    return {"run_id": folder.name, "question": request["question"], "started_at": started,
+            "context": run.get("experiment") or selection.get("experiment_id") or request.get("context"),
+            "title": run.get("title"), "surface": run.get("surface") or selection.get("surface"),
+            "outcome": outcome.get("outcome"), "report_available": (folder / "report.md").exists()}
+
+
 class RunManager:
-    def __init__(self, root: Path, *, popen=subprocess.Popen, send_message=None):
+    def __init__(self, root: Path, *, popen=subprocess.Popen, send_message=None,
+                 context: str | None = None, contexts: Path | None = None):
         self.root = root.resolve()
+        self.context = context
+        self.contexts = contexts.resolve() if contexts else None
         self.root.mkdir(parents=True, exist_ok=True)
         self.popen = popen
         self.send_message = send_message or self._send_message
@@ -30,7 +54,7 @@ class RunManager:
         self.lock = threading.Lock()
 
     def folder(self, run_id: str) -> Path:
-        if not re.fullmatch(r"[a-f0-9]{32}", run_id):
+        if not RUN_ID.fullmatch(run_id):
             raise ValueError("Invalid investigation ID")
         path = self.root / run_id
         if not path.is_dir() or path.is_symlink():
@@ -47,14 +71,29 @@ class RunManager:
             conversation_event(folder, "question", question, author="researcher")
             try:
                 with (folder / "worker.log").open("w", encoding="utf-8") as log:
-                    self.process = self.popen([sys.executable, "-m", "jesse.selecting.cli", question,
-                        "--surface", "web", "--timeout", "600", "--interactive", "--run-dir", str(folder)],
-                        stdout=log, stderr=log, start_new_session=True)
+                    command = [sys.executable, "-m", "jesse.selecting.cli", question,
+                               "--timeout", "600", "--interactive", "--run-dir", str(folder)]
+                    if self.context:
+                        command += ["--context", self.context]
+                    if self.contexts:
+                        command += ["--contexts", str(self.contexts)]
+                    self.process = self.popen(command, stdout=log, stderr=log, start_new_session=True)
             except Exception:
                 save_json(folder, "outcome.json", {"outcome": "blocked", "reason": "The investigation worker could not start."})
                 raise
             self.current_id = run_id
             return run_id
+
+    def history(self) -> list[dict]:
+        rows = []
+        for folder in self.root.iterdir():
+            if folder.is_dir() and not folder.is_symlink() and RUN_ID.fullmatch(folder.name):
+                summary = run_summary(folder)
+                if summary:
+                    summary["active"] = folder.name == self.current_id and self.process is not None and self.process.poll() is None
+                    rows.append(summary)
+        rows.sort(key=lambda row: row["started_at"], reverse=True)
+        return rows[:MAX_HISTORY]
 
     def snapshot(self, run_id: str) -> dict:
         folder = self.folder(run_id)

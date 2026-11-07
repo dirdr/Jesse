@@ -82,6 +82,28 @@ export interface LiveState {
   errors: number
 }
 
+export interface RunSummary {
+  run_id: string
+  question: string
+  started_at: string
+  context: string | null
+  title: string | null
+  surface: "web" | "desktop" | null
+  outcome: string | null
+  report_available: boolean
+  active: boolean
+}
+
+export interface ResearchContext {
+  experiment_id: string
+  title: string
+  application: string
+  activity: string
+  supported_questions: string[]
+  surfaces: ("web" | "desktop")[]
+  interaction_status: string
+}
+
 export interface VoiceTurn {
   id: string
   text: string
@@ -123,6 +145,8 @@ async function request<T>(path: string, init: RequestInit = {}): Promise<T> {
 
 export const api = {
   current: () => request<{ run_id: string | null }>("/api/current"),
+  runs: () => request<{ runs: RunSummary[] }>("/api/runs"),
+  contexts: () => request<{ pinned: string | null; contexts: ResearchContext[] }>("/api/contexts"),
   snapshot: (id: string) => request<Snapshot>(`/api/runs/${id}`),
   start: (text: string) =>
     request<{ run_id: string }>("/api/runs", { method: "POST", body: JSON.stringify({ text }) }),

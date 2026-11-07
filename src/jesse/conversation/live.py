@@ -34,6 +34,20 @@ def _short(value, limit=160):
     return value
 
 
+def _legacy_display(folder: Path, reading: dict) -> dict:
+    analysis_path = folder / f"analysis-{reading.get('trial_id')}.json"
+    try:
+        analysis = json.loads(analysis_path.read_text(encoding="utf-8")) if analysis_path.exists() else {}
+    except (OSError, json.JSONDecodeError):
+        analysis = {}
+    value = analysis.get("specific_heat_j_g_c")
+    return {"fields": {"Coolant": f"{reading.get('coolant_volume_ml')} mL at {reading.get('coolant_initial_c')} °C",
+                       "Water": f"{reading.get('water_volume_ml')} mL at {reading.get('water_initial_c')} °C",
+                       "Final": f"{reading.get('final_c')} °C"},
+            "result": f"{value:.3f} J/(g·°C)" if value is not None else None,
+            "status": analysis.get("status", "recorded")}
+
+
 def _measurements(folder: Path) -> list[dict]:
     rows = []
     for path in sorted((folder / "observations").glob("*.json")) if (folder / "observations").is_dir() else []:
@@ -41,27 +55,14 @@ def _measurements(folder: Path) -> list[dict]:
             payload = json.loads(path.read_text(encoding="utf-8"))
         except (OSError, json.JSONDecodeError):
             continue
-        if "reading" in payload:  # ChemCollective calorimetry
-            reading = payload["reading"]
-            analysis_path = folder / f"analysis-{reading.get('trial_id')}.json"
-            analysis = json.loads(analysis_path.read_text(encoding="utf-8")) if analysis_path.exists() else {}
-            fields = {
-                "Coolant": f"{reading.get('coolant_volume_ml')} mL at {reading.get('coolant_initial_c')} °C",
-                "Water": f"{reading.get('water_volume_ml')} mL at {reading.get('water_initial_c')} °C",
-                "Final": f"{reading.get('final_c')} °C",
-            }
-            result = None
-            if analysis.get("specific_heat_j_g_c") is not None:
-                result = f"{analysis['specific_heat_j_g_c']:.3f} J/(g·°C)"
-            rows.append({"id": reading.get("trial_id", path.stem), "at": payload.get("recorded_at"),
-                         "fields": fields, "result": result, "status": analysis.get("status", "recorded")})
-        else:  # NetLogo rate observation
-            settings = payload.get("settings") or {}
-            value, unit = payload.get("value"), payload.get("unit")
-            rows.append({"id": payload.get("trial_id", path.stem), "at": payload.get("observed_at"),
-                         "fields": {key: str(item) for key, item in settings.items()},
-                         "result": f"V = {value} {unit or ''}".strip() if value is not None else None,
-                         "status": payload.get("status", "recorded")})
+        display = payload.get("display")
+        if display is None and "reading" in payload:
+            display = _legacy_display(folder, payload["reading"])
+        if display is None:
+            continue
+        rows.append({"id": payload.get("trial_id") or payload.get("reading", {}).get("trial_id") or path.stem,
+                     "at": payload.get("recorded_at"), "fields": display.get("fields") or {},
+                     "result": display.get("result"), "status": display.get("status", "recorded")})
     return rows
 
 

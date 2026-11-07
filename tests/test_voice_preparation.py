@@ -35,7 +35,7 @@ class VoicePreparationTests(unittest.TestCase):
             with patch.dict(sys.modules, {"sounddevice": sounddevice}):
                 with patch("jesse.voice.live.run_live_preview", side_effect=capture):
                     with patch("pydantic_ai.Agent.run_sync", return_value=types.SimpleNamespace(output=prepared)) as model:
-                        with patch("jesse.selecting.cli.run_ready_experiment") as execute:
+                        with patch("jesse.selecting.cli.run_investigation") as execute:
                             with contextlib.redirect_stdout(output):
                                 self.assertEqual(main(["--prepare"]), 0)
         self.assertEqual(json.loads(model.call_args.args[0])["transcript"], question)

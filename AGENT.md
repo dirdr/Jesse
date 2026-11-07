@@ -1,10 +1,10 @@
 # Jesse
 
-Status: bounded NetLogo web/desktop execution, observation recording, rate analysis and question-based catalogue routing are implemented. OpenAI/PydanticAI and H selection backends have passed live routing checks. Native desktop interaction proof is accepted (run 20261107T133143442966Z, replay-verified). Scientific replay acceptance of the web evidence and a full analysis-driven follow-up remain open. Remaining product choices apply to later slices.
+Status: research contexts are implemented. Each lab is a folder under `contexts/` (context.toml, protocol.md, optional tools.py) loaded at runtime; the panel can pin one with `jesse-ui --context <id>`. The shipped context is the experimental ChemCollective coolant activity on the web surface; the generic runner supports web and desktop surfaces. NetLogo code was removed on 2026-11-07 at the user's request; its runs and replay-verified desktop proof (run 20261107T133143442966Z) remain in git history. Coolant live acceptance, replay review and an analysis-driven follow-up remain open.
 
 Team constraints: three people, 24 hours until submission as of planning, with work expected to start in 8–10 hours. Plan around eight focused implementation hours.
 
-For team task allocation and milestone handoffs, read [the hackathon work plan](docs/HACKATHON_PLAN.md) and its proposed contracts. For NetLogo execution, maintain [the operating guide](src/jesse/experiments/netlogo/protocol.md) and [shared agent behavior](src/jesse/instructions.md), which the controller loads into H's prompt. Later gates and optional multi-provider review in the work plan remain proposals; the accepted single-agent MVP still applies. This file is the canonical decision record.
+For team task allocation and milestone handoffs, read [the hackathon work plan](docs/HACKATHON_PLAN.md) and its proposed contracts. For each lab, maintain its context folder under `contexts/` and the [shared agent behavior](src/jesse/instructions.md); the controller loads both into H's prompt. Later gates and optional multi-provider review in the work plan remain proposals; the accepted single-agent MVP still applies. This file is the canonical decision record.
 
 ## Product
 
@@ -12,39 +12,13 @@ Jesse is an autonomous research technician for software-based experimental inves
 
 An unknown experiment is an unknown sample or unanswered question within supported protocols and simulations. The agent may adapt measurements and move between supported activities. Findings describe the configured simulator and its assumptions.
 
-## Demo scenarios and related tools
+## Demo scenario
 
-Maintain three bounded scenarios. Coolant is the preferred public-facing story; NetLogo is the first engineering test. Each simulator remains unverified until H demonstrates its required GUI interactions.
+The demo uses one bounded context: the ChemCollective engine coolant activity (`contexts/chemcollective-coolant`). Demo prompt: “Compare this new coolant with the reference, run the experiment, verify your measurements, and explain which absorbs more heat per gram for the same temperature rise.” Record volumes, temperatures, thermal assumptions and a repeat; calculate specific heat capacity and compare it with the supplied reference. The reference is a supplied constant, not a GUI trial.
 
-| Scenario | Researcher prompt | Tool | Evidence and completion |
-| --- | --- | --- | --- |
-| Test a new coolant | Can this coolant absorb more heat than the reference coolant? | ChemCollective coolant activity | Record masses, temperatures, thermal assumptions and repeat measurements; calculate specific heat capacity and compare with the supplied reference. |
-| Find the production bottleneck | Does adding more ingredient always make this reaction faster? | NetLogo Desktop: Enzyme Kinetics | Hold reaction constants fixed, vary substrate quantity, record rates over consistent intervals and check for a plateau. Extend with matched inhibitor trials. |
-| Investigate a sliding object | How steep must this ramp be before the object starts sliding? | Algodoo with a prepared ramp scene | Hold object and surface settings fixed, repeat angle trials, bracket the sliding threshold and compare with the friction model. |
+Additional labs are added as context folders. Each remains unverified until H demonstrates its required GUI interactions. Choose tools by scientific fit; do not force unrelated simulators into one experimental chain. Findings concern the simulator, not a physical laboratory validation.
 
-Explain substrate as the ingredient, enzyme as the processing machine, and inhibitor as something that interferes with processing. Measure reaction rate rather than conflating final product quantity with speed. NetLogo's inhibitor model is irreversible; report that limitation. Findings concern the simulator, not a physical laboratory validation.
-
-Choose tools by scientific fit. These are separate investigations; do not force unrelated simulators into one experimental chain. Use Python for analysis and scientific Markdown for outputs in all three scenarios.
-
-## First implementation: NetLogo desktop feasibility
-
-The user also authorized testing NetLogo Web and comparing interaction performance with desktop. Select the surface explicitly; use the same model/protocol and record timing, step/cost metrics when available, settings and evidence. Web uses H's visual browser; desktop uses the local connection. Changing surface does not change the scientific acceptance criteria. Additional stories and models remain proposals.
-
-Core implementation now includes a bounded NetLogo rate-comparison tool and `jesse-analyze` for saved runs. It validates comparable conditions, preserves raw observations, writes separate derived artifacts and suggests checks or repeats. It does not execute follow-ups or establish saturation. The full scientific gate still requires an agreed protocol, calibrated budget, evidence verification and an observed analysis-driven follow-up. Track remaining work in the [demo readiness checklist](docs/HACKATHON_PLAN.md#demo-readiness-checklist).
-
-The linked model version 7.0.4 has now been inspected to define the displayed V: it is a free-substrate depletion proxy, includes substrate binding and is calculated before tick increment. Its source-derived units are substrate molecules/model tick. Supply the [measurement definition](src/jesse/experiments/netlogo/measurement.md) with the protocol; do not describe V as a direct instantaneous product-formation rate. Existing raw observations retain their original unit labels and verification status.
-
-The second live web test exercised recording → Python analysis → report in one H session. The analysis declined comparison because the recorded rate units were unknown. Resolving the documented rate definition and units remains required; this test does not complete the full scientific gate.
-
-Create a repository-local Python environment and one entry point using the hosted H Agents API with a local desktop connection and HAI_API_KEY supplied through the environment. Use screen observations, mouse and keyboard; simulator scripting and headless execution are outside this test.
-
-H opens the bundled Enzyme Kinetics model, inspects settings, sets a nonzero catalytic rate (the documented default Kr is zero), enables bounded runs, runs one experiment and reads a result. Then repeat with a different substrate quantity while keeping other settings fixed. Record settings and actual observations without requiring a predetermined numerical outcome.
-
-Save session identifier, Agent View URL, evidence references and a short Markdown outcome in ignored run files. Limit each test session to ten minutes. Missing credentials, permissions or unreadable results produce a blocked outcome; never invent readings. macOS desktop permission prompts require user interaction.
-
-Completion: H visibly changes a native application control, runs the simulation, reads a result and records evidence corresponding to the settings. Text input comes first; voice, automated catalogue selection and full experimental analysis follow after desktop feasibility is established.
-
-Sources: https://ccl.northwestern.edu/netlogo/models/EnzymeKinetics ; https://chemcollective.org/activities/info/92 ; https://www.algodoo.com/what-is-it/
+Sources: https://chemcollective.org/activities/info/92 ; https://chemcollective.org/vlabs
 
 Retain five stories: Result Detective, Protocol Reproducer, Hands-Free Technician, Adaptive Experimenter, and Experiment Handoff. Prioritize Result Detective.
 
@@ -76,79 +50,68 @@ The public HoloDesktop CLI repository now installs the CLI distributed with the 
 
 ## Architecture
 
-Jesse has one local Python controller, a replaceable protocol selector and one hosted H computer-use operator. Python owns session lifecycle, budgets, validated records and artifacts; H owns GUI actions. The selector uses either OpenAI through PydanticAI or a separate H tool-only planning session. Gladia is the planned speech-input adapter. Desktop and web are alternative execution surfaces for a selected experiment.
+Jesse has one local Python controller, a replaceable context selector and one hosted H computer-use operator. Python owns contexts, session lifecycle, budgets, tools, validated records and artifacts; H owns GUI actions. The selector uses OpenAI through PydanticAI or a separate H tool-only planning session, or is skipped when a context is pinned. Gladia supplies voice input in the panel. Web and desktop are alternative execution surfaces declared per context.
 
-Solid connections show implemented paths; dashed connections show planned capabilities. The native adapter is implemented but still awaits interaction proof. Catalogue selection is implemented for one bounded protocol; other applications and scientific inference remain future work.
+Solid connections show implemented paths; dashed connections show planned capabilities.
 
 ```mermaid
 flowchart TB
     U["Researcher"]
-    G["Gladia transcription<br/>Live preview"]
+    G["Gladia transcription"]
     T["Speech output<br/>Provider to be chosen"]
 
     subgraph LOCAL["Jesse - local Python application"]
+        X["Research contexts<br/>contexts/&lt;id&gt;/"]
+        P["Context selector<br/>OpenAI or H, or pinned"]
         C["Controller<br/>Preflight, sessions, budgets and cancellation"]
-        P["Catalogue selector<br/>OpenAI through PydanticAI, or H"]
-        K["Approved experiment definitions<br/>Capabilities, surfaces and limits"]
-        I["Agent context<br/>Personality and experiment protocol"]
-        R["Observation recording<br/>Validation and idempotent writes"]
-        A["Scientific analysis<br/>Predefined Python methods - planned"]
-        F[("Investigation files<br/>Settings, readings, events and metrics")]
+        K["Tools<br/>Built-in and tools.py"]
+        F[("Investigation files<br/>runs/&lt;id&gt;/")]
         O["Markdown report<br/>Outcome, limitations and evidence links"]
+        Y["Panel<br/>Live view and history"]
     end
 
     subgraph HAPI["H managed runtime"]
         H["One H agent<br/>Observe, reason, act and request tools"]
-        W["Hosted visual browser<br/>NetLogo Web"]
+        W["Hosted visual browser"]
         V["Agent View<br/>Live observation and replay"]
     end
 
-    D["Local desktop connection<br/>NetLogo Desktop - permission required"]
+    D["Local desktop<br/>user_device bridge"]
 
-    U -->|"Start text-driven run"| C
-    C -->|"Submit question and available surfaces"| P
-    K -->|"Describe supported protocols"| P
-    P -->|"Return proposal for Python validation"| C
-    U -->|"Speak a question"| G
-    G -->|"Final turn: optional plan-only selection"| P
-    G -->|"Enrich and send turns: optional general-browser session"| H
-    G -.->|"Future active-run correction"| C
-    I -->|"Supply behavior and protocol"| C
+    U -->|"Type a question or correction"| Y
+    U -->|"Speak"| G
+    G -->|"Final turn"| Y
+    Y -->|"Start or steer a run"| C
+    X -->|"Questions, surfaces, limits"| P
+    P -->|"Validated context"| C
+    X -->|"Protocol and tools"| C
     C -->|"Start session and return tool results"| H
-    H -->|"Stream events and request observation writes"| C
+    H -->|"Stream events and call tools"| K
+    K -->|"Validated readings"| F
     H -->|"Operate visible controls"| W
-    W -->|"Return screen observations"| H
     H -->|"Operate mouse and keyboard"| D
-    D -->|"Return screenshots"| H
-    C -->|"Record raw readings"| R
-    R -->|"Persist validated observations"| F
-    C -->|"Persist session events and metrics"| F
-    C -.->|"Submit comparable measurements"| A
-    A -.->|"Return results for H to choose a follow-up"| C
-    C -->|"Write outcome and verification status"| O
-    F -->|"Supply traceable evidence"| O
+    C -->|"Write outcome"| O
+    F -->|"Traceable evidence"| O
+    F -->|"History and replay"| Y
     H -->|"Expose session events"| V
     U -->|"Watch live or replay"| V
-    O -->|"Present findings for review"| U
     C -.->|"Send brief progress updates"| T
     T -.->|"Speak updates"| U
 ```
 
-Extensibility lives in experiment definitions: supported question, application/model, interaction surface, operating protocol, measurement rules, assumptions, analyzer and completion criteria. A new NetLogo model reuses the runtime and surface adapters; another application may require an additional adapter and always needs its own interaction proof. Traffic Grid, Fire and the ChemCollective coolant activity are proposed stories, not implemented catalogue entries.
+Extensibility lives in context folders. A new lab on an existing surface needs only a folder; it still needs its own interaction proof before its status changes from unverified.
 
-The scientific loop is plan → measure → analyze → verify or adapt → report. The current feasibility runner covers GUI execution, recording, a bounded Python rate comparison and a preliminary report; full scientific inference and autonomous follow-up remain planned. A completed API turn is separate from a supported scientific conclusion. Outputs may be supported, inconclusive or blocked; current runs remain inconclusive pending evidence review, or blocked when a required capability is missing.
+The scientific loop is plan → measure → analyze → verify or adapt → report. Outputs may be supported, inconclusive or blocked; current runs remain inconclusive pending evidence review, or blocked when a required capability is missing. A completed API turn is separate from a supported scientific conclusion.
 
-Keep one desktop operator and one custom-tool executor. Additional agent providers or a read-only reviewer remain optional future extensions. Agent View observes execution; it does not replace the controller or execute custom tools.
+Keep one operator and one custom-tool executor. Additional agent providers or a read-only reviewer remain optional future extensions. Agent View observes execution; it does not replace the controller or execute custom tools.
 
-## Application catalogue and investigation records
+## Research contexts and investigation records
 
-Maintain a small explicit catalogue of approved tools. Each entry specifies scientific questions supported, available models or activities, launch location, browser or desktop environment, controllable parameters, observable outputs, assumptions, and tested interaction status. Candidate entries: ChemCollective, NetLogo and Algodoo. Inclusion is a proposal until its required GUI interactions have been demonstrated with H.
+The catalogue is the set of folders under `contexts/` (override with `--contexts` or `JESSE_CONTEXTS_DIR`). Folders starting with `_` are skipped; `contexts/_template` is the starting point. Each `context.toml` declares supported and unsupported questions, application and activity, surfaces (`[surfaces.web]` with `start_url`, `[surfaces.desktop]` with optional `app_path`), assumptions, completion criteria, sources, interaction status, built-in tools and limits (budget ≤ 600 s, steps, trials). `protocol.md` is H's operating guide. An optional `tools.py` defines `tools(lab)` returning extra H tools and `report(lab)` returning a report section; it runs as local Python, so contexts are trusted code reviewed like any other change.
 
-`src/jesse/selecting/domain.py` registers Enzyme Kinetics and experimental ChemCollective coolant feasibility protocols. `jesse "question"` selects and executes one; `--catalogue` lists capabilities and `--plan-only` routes without GUI execution. Only registered executors are dispatched through this path. Unsupported questions and unavailable requested surfaces produce blocked reports. The separate voice general-browser mode does not dispatch these protocols. The direct `jesse-netlogo` command remains available without a selector API call. Anthropic credentials may be configured locally, but no Anthropic adapter is implemented.
+`jesse "question"` selects among loaded contexts and executes the chosen one; `--context <id>` skips the selector; `--catalogue` lists contexts and `--plan-only` routes without GUI execution. Python validates the selected context, surface availability and preflight before starting H. Unsupported questions and unavailable surfaces produce blocked reports. The separate voice general-browser mode does not dispatch contexts. Anthropic credentials may be configured locally, but no Anthropic adapter is implemented.
 
-Select the application that supports the requested measurement and explain the choice briefly. Use another application only when it contributes a relevant experimental or analysis capability. Shared subject matter alone does not make results from different models comparable. Unsupported questions produce a blocked outcome with the missing capability identified.
-
-Persist investigation-local settings, raw readings, units, screenshots, hypotheses, analysis and conclusions as ordinary files with stable run and step identifiers. Preserve original observations and distinguish derived values. Make retried writes idempotent. Reports link to their evidence; later investigations do not automatically retrieve or learn from these files.
+Persist investigation-local settings, raw readings, units, screenshots, analysis and conclusions as ordinary files under `runs/<id>/` with stable trial identifiers: `observations/` holds raw readings, `analyses/` holds derived values. Retried identical writes are idempotent; conflicting writes and readings beyond `max_trials` are rejected. Reports link to their evidence. The panel sidebar lists past runs for replay; later investigations do not automatically retrieve or learn from them.
 
 ## Autonomy and completion
 

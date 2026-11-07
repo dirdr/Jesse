@@ -16,8 +16,7 @@ const OUTCOME = {
 export function experimentName(id: string | null | undefined) {
   if (!id) return null
   if (id.startsWith("chemcollective")) return "ChemCollective coolant"
-  if (id.startsWith("netlogo")) return "NetLogo Enzyme Kinetics"
-  return id
+  return id.replace(/-/g, " ")
 }
 
 export function OutcomeBadge({ outcome }: { outcome: string }) {

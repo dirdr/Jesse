@@ -41,10 +41,10 @@ def gladia_listen(on_turn, on_partial, stopping: threading.Event) -> None:
     run_live_preview(GladiaClient(), StoppableStream, on_turn=on_turn, on_partial=on_partial)
 
 
-def voice_unavailable() -> str | None:
+def voice_unavailable(needs_planner: bool = True) -> str | None:
     if not os.environ.get("GLADIA_API_KEY", "").strip():
         return "Set GLADIA_API_KEY in .env to use the microphone."
-    if not any(os.environ.get(name, "").strip() for name in ("OPENAI_API_KEY", "OPENAI_KEY")):
+    if needs_planner and not any(os.environ.get(name, "").strip() for name in ("OPENAI_API_KEY", "OPENAI_KEY")):
         return "Set OPENAI_API_KEY or OPENAI_KEY in .env: spoken questions go to the experiment selector."
     try:
         import sounddevice  # noqa: F401

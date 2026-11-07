@@ -4,9 +4,10 @@ from unittest.mock import patch
 from types import SimpleNamespace
 
 from jesse.selecting.application import select_experiment
-from jesse.selecting.domain import CATALOGUE, Proposal
+from jesse.selecting.domain import Proposal
 from jesse.selecting.domain import PlannerUnavailable
 from jesse.selecting.adapters import PlannerOutput, PydanticExperimentPlanner
+from context_fixtures import CATALOGUE
 
 
 class FakePlanner:
@@ -22,7 +23,7 @@ class FakePlanner:
 
 class SelectionTests(unittest.TestCase):
     def test_supported_question_selects_a_registered_bounded_protocol(self):
-        planner = FakePlanner(Proposal("select", CATALOGUE[0].experiment_id, "web", "Compare substrate settings in a preliminary assay."))
+        planner = FakePlanner(Proposal("select", CATALOGUE[0].id, "web", "Compare substrate settings in a preliminary assay."))
         selected = select_experiment("Does more substrate change the rate?", CATALOGUE, {"web"}, planner)
         self.assertEqual(selected.status, "ready")
         self.assertEqual(selected.maximum_trials, 2)
@@ -37,15 +38,15 @@ class SelectionTests(unittest.TestCase):
     def test_unregistered_experiments_and_unavailable_surfaces_are_rejected(self):
         for proposal in (
             Proposal("select", "invented-app", "web", "Use another app."),
-            Proposal("select", CATALOGUE[0].experiment_id, "desktop", "Use desktop."),
-            Proposal("select", CATALOGUE[0].experiment_id, "web", ""),
+            Proposal("select", CATALOGUE[0].id, "desktop", "Use desktop."),
+            Proposal("select", CATALOGUE[0].id, "web", ""),
         ):
             with self.subTest(proposal=proposal):
                 selected = select_experiment("Compare rates", CATALOGUE, {"web"}, FakePlanner(proposal))
                 self.assertEqual(selected.status, "blocked")
 
     def test_explicit_surface_preference_is_enforced(self):
-        planner = FakePlanner(Proposal("select", CATALOGUE[0].experiment_id, "web", "Use web."))
+        planner = FakePlanner(Proposal("select", CATALOGUE[0].id, "web", "Use web."))
         selected = select_experiment("Compare rates", CATALOGUE, {"web", "desktop"}, planner, "desktop")
         self.assertEqual(selected.status, "blocked")
         self.assertEqual(planner.available_surfaces, {"desktop"})
@@ -74,7 +75,7 @@ class SelectionTests(unittest.TestCase):
 
     def test_provider_adapter_returns_the_typed_proposal(self):
         from pydantic_ai.usage import RunUsage
-        output = PlannerOutput(decision="select", experiment_id=CATALOGUE[0].experiment_id, surface="web", reason="A bounded preliminary comparison is available.")
+        output = PlannerOutput(decision="select", experiment_id=CATALOGUE[0].id, surface="web", reason="A bounded preliminary comparison is available.")
         result = SimpleNamespace(output=output, usage=RunUsage())
         with patch.dict("os.environ", {"OPENAI_API_KEY": "synthetic-key"}), patch("pydantic_ai.Agent.run_sync", return_value=result):
             proposed = PydanticExperimentPlanner().propose("Compare rates", CATALOGUE, {"web"}, "auto")
@@ -97,7 +98,7 @@ class SelectionTests(unittest.TestCase):
                 yield {"type": "SyntheticPlannerEvent"}
 
             def wait_for_completion(self, **kwargs):
-                return SimpleNamespace(status="completed", answer=PlannerOutput(decision="select", experiment_id=CATALOGUE[0].experiment_id, surface="web", reason="Supported preliminary comparison."))
+                return SimpleNamespace(status="completed", answer=PlannerOutput(decision="select", experiment_id=CATALOGUE[0].id, surface="web", reason="Supported preliminary comparison."))
 
             def cancel(self):
                 self.cancelled = True

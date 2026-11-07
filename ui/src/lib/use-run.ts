@@ -3,10 +3,11 @@ import { toast } from "sonner"
 import { api, type LiveState, type Snapshot } from "@/lib/api"
 
 const RUN_PARAM = "run"
+export const RUN_ID = /^[A-Za-z0-9][A-Za-z0-9_-]{0,79}$/
 
 function runFromUrl(): string | null {
   const id = new URLSearchParams(window.location.search).get(RUN_PARAM)
-  return id && /^[a-f0-9]{32}$/.test(id) ? id : null
+  return id && RUN_ID.test(id) ? id : null
 }
 
 /** One investigation at a time; snapshot and live view are polled while it is active. */

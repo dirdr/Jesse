@@ -10,8 +10,9 @@ import unittest
 from unittest.mock import patch
 
 from jesse.selecting.cli import main
-from jesse.selecting.domain import CATALOGUE, PlannerUnavailable, Proposal
-from jesse.experiments.netlogo.preflight import Check
+from jesse.selecting.domain import PlannerUnavailable, Proposal
+from jesse.preflight import Check
+from context_fixtures import CATALOGUE
 
 
 class Planner:
@@ -37,35 +38,36 @@ def workspace():
             os.chdir(previous)
 
 
-def setup_check(explicit, surface):
-    return [Check("synthetic-availability", surface == "web", "Synthetic setup check")], None
+def setup_check(surface, application=None):
+    return [Check("synthetic-availability", surface == "web", "Synthetic setup check")]
 
 
 class QuestionCliTests(unittest.TestCase):
     def test_selection_output_displays_non_ascii_text(self):
         planner = Planner(Proposal("blocked", None, None, "Aucun protocole moléculaire disponible."))
         output = io.StringIO()
-        with workspace(), patch("jesse.selecting.cli.check_desktop", side_effect=setup_check), patch("jesse.selecting.cli.PydanticExperimentPlanner", return_value=planner):
+        with workspace(), patch("jesse.selecting.cli.check_surface", side_effect=setup_check), patch("jesse.selecting.cli.load_contexts", return_value=CATALOGUE), patch("jesse.selecting.cli.PydanticExperimentPlanner", return_value=planner):
             with contextlib.redirect_stdout(output):
                 self.assertEqual(main(["Une molécule ?", "--plan-only"]), 1)
         self.assertIn("Aucun protocole moléculaire disponible.", output.getvalue())
         self.assertIn("Une molécule ?", output.getvalue())
 
     def test_selected_protocol_reuses_run_folder_and_preserves_question(self):
-        planner = Planner(Proposal("select", CATALOGUE[0].experiment_id, "web", "A preliminary rate comparison is supported."))
-        with workspace() as root, patch("jesse.selecting.cli.check_desktop", side_effect=setup_check), patch("jesse.selecting.cli.PydanticExperimentPlanner", return_value=planner), patch("jesse.selecting.cli.run_ready_experiment", return_value=0) as execute:
+        planner = Planner(Proposal("select", CATALOGUE[0].id, "web", "A preliminary rate comparison is supported."))
+        with workspace() as root, patch("jesse.selecting.cli.check_surface", side_effect=setup_check), patch("jesse.selecting.cli.load_contexts", return_value=CATALOGUE), patch("jesse.selecting.cli.PydanticExperimentPlanner", return_value=planner), patch("jesse.selecting.cli.run_investigation", return_value=0) as execute:
             self.assertEqual(main(["Does more substrate increase the rate?"]), 0)
             folder = next((root / "runs").iterdir())
             args = execute.call_args.args
             self.assertEqual(args[0].resolve(), folder.resolve())
-            self.assertEqual(args[3], "web")
+            self.assertEqual(args[1].id, CATALOGUE[0].id)
+            self.assertEqual(args[2], "web")
+            self.assertLessEqual(args[3], 600)
             self.assertEqual(args[4], "Does more substrate increase the rate?")
-            self.assertLessEqual(args[1], 300)
             self.assertEqual(json.loads((folder / "selection.json").read_text())["status"], "ready")
 
     def test_unsupported_question_never_launches_h_operator(self):
         planner = Planner(Proposal("blocked", None, None, "No coolant protocol is registered."))
-        with workspace() as root, patch("jesse.selecting.cli.check_desktop", side_effect=setup_check), patch("jesse.selecting.cli.PydanticExperimentPlanner", return_value=planner), patch("jesse.selecting.cli.run_ready_experiment") as execute:
+        with workspace() as root, patch("jesse.selecting.cli.check_surface", side_effect=setup_check), patch("jesse.selecting.cli.load_contexts", return_value=CATALOGUE), patch("jesse.selecting.cli.PydanticExperimentPlanner", return_value=planner), patch("jesse.selecting.cli.run_investigation") as execute:
             self.assertEqual(main(["Measure a coolant"]), 1)
             execute.assert_not_called()
             folder = next((root / "runs").iterdir())
@@ -73,21 +75,42 @@ class QuestionCliTests(unittest.TestCase):
             self.assertFalse((folder / "session.json").exists())
 
     def test_plan_only_never_operates_simulator(self):
-        planner = Planner(Proposal("select", CATALOGUE[0].experiment_id, "web", "A preliminary comparison is available."))
-        with workspace(), patch("jesse.selecting.cli.check_desktop", side_effect=setup_check), patch("jesse.selecting.cli.PydanticExperimentPlanner", return_value=planner), patch("jesse.selecting.cli.run_ready_experiment") as execute:
+        planner = Planner(Proposal("select", CATALOGUE[0].id, "web", "A preliminary comparison is available."))
+        with workspace(), patch("jesse.selecting.cli.check_surface", side_effect=setup_check), patch("jesse.selecting.cli.load_contexts", return_value=CATALOGUE), patch("jesse.selecting.cli.PydanticExperimentPlanner", return_value=planner), patch("jesse.selecting.cli.run_investigation") as execute:
             self.assertEqual(main(["Compare rates", "--plan-only"]), 0)
             execute.assert_not_called()
 
     def test_provider_failure_produces_blocked_report(self):
         planner = Planner(PlannerUnavailable("OpenAI credits are unavailable."))
-        with workspace() as root, patch("jesse.selecting.cli.check_desktop", side_effect=setup_check), patch("jesse.selecting.cli.PydanticExperimentPlanner", return_value=planner), patch("jesse.selecting.cli.run_ready_experiment") as execute:
+        with workspace() as root, patch("jesse.selecting.cli.check_surface", side_effect=setup_check), patch("jesse.selecting.cli.load_contexts", return_value=CATALOGUE), patch("jesse.selecting.cli.PydanticExperimentPlanner", return_value=planner), patch("jesse.selecting.cli.run_investigation") as execute:
             self.assertEqual(main(["Compare rates"]), 1)
             execute.assert_not_called()
             folder = next((root / "runs").iterdir())
             self.assertIn("credits", (folder / "report.md").read_text())
 
     def test_catalogue_can_be_listed_without_provider_or_preflight(self):
-        with patch("jesse.selecting.cli.PydanticExperimentPlanner") as planner, patch("jesse.selecting.cli.check_desktop") as preflight:
+        with patch("jesse.selecting.cli.PydanticExperimentPlanner") as planner, patch("jesse.selecting.cli.check_surface") as preflight, patch("jesse.selecting.cli.load_contexts", return_value=CATALOGUE), contextlib.redirect_stdout(io.StringIO()):
             self.assertEqual(main(["--catalogue"]), 0)
             planner.assert_not_called()
             preflight.assert_not_called()
+
+
+class PinnedContextTests(unittest.TestCase):
+    def test_pinned_context_skips_the_planner_and_runs_on_web(self):
+        with workspace() as root, patch("jesse.selecting.cli.check_surface", side_effect=setup_check), patch("jesse.selecting.cli.load_contexts", return_value=CATALOGUE), patch("jesse.selecting.cli.PydanticExperimentPlanner") as planner, patch("jesse.selecting.cli.run_investigation", return_value=0) as execute:
+            self.assertEqual(main(["Compare the readings", "--context", CATALOGUE[0].id]), 0)
+            planner.assert_not_called()
+            self.assertEqual(execute.call_args.args[2], "web")
+            folder = next((root / "runs").iterdir())
+            self.assertEqual(json.loads((folder / "selection.json").read_text())["experiment_id"], CATALOGUE[0].id)
+
+    def test_pinned_context_blocks_when_its_surface_is_unavailable(self):
+        with workspace(), patch("jesse.selecting.cli.check_surface", side_effect=setup_check), patch("jesse.selecting.cli.load_contexts", return_value=CATALOGUE), patch("jesse.selecting.cli.run_investigation") as execute:
+            self.assertEqual(main(["Compare", "--context", CATALOGUE[0].id, "--surface", "desktop"]), 1)
+            execute.assert_not_called()
+
+    def test_unknown_context_is_rejected_before_any_run(self):
+        with workspace() as root, patch("jesse.selecting.cli.load_contexts", return_value=CATALOGUE), contextlib.redirect_stderr(io.StringIO()):
+            with self.assertRaises(SystemExit):
+                main(["Compare", "--context", "missing"])
+            self.assertFalse((root / "runs").exists())
