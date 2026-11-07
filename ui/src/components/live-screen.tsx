@@ -45,7 +45,7 @@ export function LiveScreen({ runId, frames, actions, active, replay, pinned, onP
 
   return (
     <div className="flex min-h-0 flex-col gap-3">
-      <div className="relative overflow-hidden rounded-2xl border border-border/70 bg-black shadow-2xl shadow-black/20 ring-1 ring-white/5">
+      <div className="relative overflow-hidden rounded-md border-2 border-foreground/80 bg-black">
         <div className="flex items-center justify-between gap-3 border-b border-white/10 bg-zinc-950/90 px-4 py-2 text-xs text-zinc-400">
           <div className="flex items-center gap-2">
             {replay ? (
@@ -99,10 +99,10 @@ export function LiveScreen({ runId, frames, actions, active, replay, pinned, onP
                     exit={{ opacity: 0 }}
                     transition={{ type: "spring", stiffness: 300, damping: 22 }}
                   >
-                    <span className="absolute -top-7 -left-7 size-14 animate-ping rounded-full bg-brand/40" />
-                    <span className="absolute -top-4 -left-4 size-8 rounded-full border-[3px] border-white bg-brand/70 shadow-lg shadow-brand/50" />
+                    <span className="absolute -top-7 -left-7 size-14 animate-ping rounded-full bg-hazard/40" />
+                    <span className="absolute -top-4 -left-4 size-8 rounded-full border-[3px] border-white bg-hazard/70 shadow-lg" />
                     {typeof pointer.action.args.element === "string" && (
-                      <span className="absolute top-5 left-5 max-w-80 rounded-lg bg-zinc-950/85 px-3 py-1.5 text-sm leading-snug font-medium whitespace-nowrap text-white shadow-lg ring-1 ring-white/10 backdrop-blur">
+                      <span className="absolute top-5 left-5 max-w-80 rounded-sm bg-zinc-950/85 px-3 py-1.5 text-sm leading-snug font-medium whitespace-nowrap text-white shadow-lg ring-1 ring-white/10 backdrop-blur">
                         {pointer.action.args.element}
                       </span>
                     )}
@@ -113,7 +113,7 @@ export function LiveScreen({ runId, frames, actions, active, replay, pinned, onP
           ) : (
             <div className="absolute inset-0 grid place-items-center">
               <div className="flex flex-col items-center gap-3 text-zinc-400">
-                <div className="size-10 animate-spin rounded-full border-2 border-zinc-700 border-t-brand" />
+                <div className="size-10 animate-spin rounded-full border-2 border-zinc-700 border-t-hazard" />
                 <span className="text-sm">{active ? "Opening the laboratory…" : "No screen was recorded for this run."}</span>
               </div>
             </div>
@@ -122,7 +122,7 @@ export function LiveScreen({ runId, frames, actions, active, replay, pinned, onP
           {(caption || lastAction) && (
             <div className="absolute inset-x-0 bottom-0 z-20 bg-gradient-to-t from-black/90 via-black/60 to-transparent px-5 pt-10 pb-4">
               {lastAction && (
-                <div className="mb-1 flex items-center gap-1.5 text-[11px] font-medium tracking-wide text-brand-2 uppercase">
+                <div className="mb-1 flex items-center gap-1.5 text-xs font-semibold text-hazard">
                   {(() => {
                     const Icon = actionStyle(lastAction.tool).icon
                     return <Icon className="size-3.5" />
@@ -191,7 +191,7 @@ function Scrubber({
           const index = Number(event.target.value)
           onPin(index >= last ? null : index)
         }}
-        className="h-1.5 flex-1 cursor-pointer accent-[var(--brand)]"
+        className="h-1.5 flex-1 cursor-pointer accent-[var(--crystal)]"
       />
       {/* Always rendered so the slider width never changes when the button toggles. */}
       <Button

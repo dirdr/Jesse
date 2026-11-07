@@ -1,0 +1,31 @@
+- generic [ref=e2]:
+  - generic [ref=e4]:
+    - banner [ref=e5]:
+      - generic [ref=e6]:
+        - generic [ref=e7]:
+          - button "Past investigations" [ref=e8]
+          - button "Jesse home":
+            - generic:
+              - img "Jesse"
+        - generic [ref=e9]:
+          - generic [ref=e10]:
+            - generic [ref=e11]: Persona
+            - combobox "Persona" [ref=e12]:
+              - option "Jesse Pinkman" [selected]
+              - option "Lab colleague"
+          - generic [ref=e13]: Ready
+    - main [ref=e16]:
+      - generic [ref=e17]:
+        - heading "Jesse" [level=1] [ref=e18]:
+          - generic:
+            - img "Jesse"
+        - generic [ref=e19]:
+          - generic [ref=e20]: Research question
+          - textbox "Research question" [active] [ref=e23]:
+            - /placeholder: What do you want to find out?
+          - generic [ref=e24]:
+            - generic [ref=e25]:
+              - button "Microphone unavailable" [disabled]
+            - button "Start experiment" [disabled]
+  - button "Say hi to Jesse" [ref=e26] [cursor=pointer]
+  - region "Notifications alt+T"

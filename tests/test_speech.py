@@ -31,7 +31,7 @@ class SpeechTests(unittest.TestCase):
 
 
 class TranslationFailureTests(unittest.TestCase):
-    def test_original_text_is_spoken_when_translation_fails(self):
+    def test_failed_rewrite_does_not_speak_or_cache_raw_status(self):
         with tempfile.TemporaryDirectory() as directory:
             folder = Path(directory)
             event = "d" * 32
@@ -43,8 +43,10 @@ class TranslationFailureTests(unittest.TestCase):
             def broken(text, question):
                 raise RuntimeError("offline")
 
-            cached_speech(folder, event, lambda text: calls.append(text) or b"mp3", broken)
-            self.assertEqual(calls, ["Done."])
+            with self.assertRaises(RuntimeError):
+                cached_speech(folder, event, lambda text: calls.append(text) or b"mp3", broken)
+            self.assertEqual(calls, [])
+            self.assertEqual(list(folder.glob("speech/**/*.mp3")), [])
 
 
 class StepSpeechTests(unittest.TestCase):
@@ -74,26 +76,29 @@ class StepSpeechTests(unittest.TestCase):
 
 
 class ProviderTests(unittest.TestCase):
-    def test_elevenlabs_key_alone_enables_speech(self):
+    def test_pinkman_requires_its_writer_and_fish_keys(self):
         from unittest import mock
         from jesse.conversation import speech
 
-        for name in ("ELEVENLABS_API_KEY", "IL_KEY"):
+        for name in ("ELEVENLABS_API_KEY", "IL_KEY", "OPENAI_KEY", "FISH_API_KEY"):
             with mock.patch.dict("os.environ", {name: "k"}, clear=True):
-                self.assertTrue(speech.speech_available())
+                self.assertFalse(speech.speech_available())
+        with mock.patch.dict("os.environ", {"OPENAI_KEY": "writer", "FISH_API_KEY": "fish"}, clear=True):
+            self.assertTrue(speech.speech_available())
         with mock.patch.dict("os.environ", {}, clear=True):
             self.assertFalse(speech.speech_available())
 
     def test_pinkman_persona_is_default_and_plain_is_explicit(self):
         from unittest import mock
         from jesse.conversation import speech
+        from jesse.personality import get_persona
 
         with mock.patch.dict("os.environ", {}, clear=True):
-            self.assertTrue(speech.pinkman())
+            self.assertEqual(get_persona().id, "pinkman")
         with mock.patch.dict("os.environ", {"JESSE_PERSONA": "pinkman"}, clear=True):
-            self.assertTrue(speech.pinkman())
+            self.assertEqual(get_persona().id, "pinkman")
         with mock.patch.dict("os.environ", {"JESSE_PERSONA": "plain"}, clear=True):
-            self.assertFalse(speech.pinkman())
+            self.assertEqual(get_persona().id, "plain")
 
 
 if __name__ == "__main__":

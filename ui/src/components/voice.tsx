@@ -20,9 +20,9 @@ export function VoiceButton({ state, onToggle, className }: { state: VoiceState 
             disabled={!state?.available}
             aria-pressed={listening}
             aria-label={label}
-            className="relative rounded-full"
+            className="relative"
           >
-            {listening && <span className="absolute inset-0 animate-ping rounded-full bg-destructive/40" />}
+            {listening && <span className="absolute inset-0 animate-ping rounded-md bg-destructive/40" />}
             {state && !state.available ? <MicOff /> : <Mic />}
           </Button>
         </span>
@@ -43,7 +43,7 @@ export function TranscriptPill({ state }: { state: VoiceState | null }) {
           exit={{ y: 16, opacity: 0 }}
           className="pointer-events-none fixed inset-x-0 bottom-6 z-40 flex justify-center px-4"
         >
-          <div className="flex max-w-2xl items-center gap-3 rounded-full border border-border/70 bg-background/90 px-5 py-3 shadow-2xl backdrop-blur-xl">
+          <div className="flex max-w-2xl items-center gap-3 rounded-md border-2 border-foreground/80 bg-card px-5 py-3 shadow-[4px_4px_0_0_var(--brand)]">
             <span className="relative flex size-2.5 shrink-0">
               <span className="absolute inset-0 animate-ping rounded-full bg-destructive/60" />
               <span className="relative size-2.5 rounded-full bg-destructive" />

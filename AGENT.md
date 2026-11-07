@@ -58,7 +58,7 @@ Solid connections show implemented paths; dashed connections show planned capabi
 flowchart TB
     U["Researcher"]
     G["Gladia transcription"]
-    T["Speech output<br/>Fish Audio, ElevenLabs or OpenAI"]
+    T["Persona speech output<br/>Pinkman: Fish Audio<br/>Lab colleague: OpenAI"]
 
     subgraph LOCAL["Jesse - local Python application"]
         X["Research contexts<br/>contexts/&lt;id&gt;/"]
@@ -125,7 +125,9 @@ Calibrate numerical limits after the interaction feasibility exercise and settle
 
 ## Personality and artifacts
 
-Conversation: a capable, slightly cheeky lab partner with Pinkman energy, occasional slang and situational humour. Warmth and excitement follow actual findings; uncertainty and blockers get direct, serious language. Announce meaningful actions and findings in one or two natural sentences. Example: “Looks promising. Let's repeat it before we get attached.” Only propose a repeat when the protocol and budget allow it. The shared character in `src/jesse/personality.py` is loaded into H's prompt and the spoken-update writer; it also supplies OpenAI speech-delivery instructions. `JESSE_PERSONA=plain` selects a neutral colleague instead.
+The panel offers one persona selector before an investigation. The default, Jesse Pinkman, bundles a capable, cheeky lab partner's character with the selected Fish Audio reference voice and a fixed speech model. The Lab colleague persona bundles neutral wording with OpenAI's ash voice. The registry in `src/jesse/personality.py` owns each persona's instructions, provider, model and voice. `JESSE_PERSONA` can set the initial choice (`pinkman` by default, or `plain`). The panel selection also applies to spoken questions. Each new run saves `persona.json` and passes that choice to the H worker, spoken-update writer and speech synthesizer. The choice stays fixed for that run; choose another persona before the next investigation.
+
+Warmth and excitement follow actual findings; uncertainty and blockers get direct, serious language. Announce meaningful actions and findings in one or two natural sentences. Example: “Looks promising. Let's repeat it before we get attached.” Only propose a repeat when the protocol and budget allow it.
 
 Reports: precise scientific language separating method, observations, analysis, interpretation and limitations.
 
@@ -133,7 +135,7 @@ Produce one primary Markdown artifact per investigation, with KaTeX-compatible m
 
 The report includes the question, protocol, assumptions, observations, analysis, verification, conclusion, limitations and evidence links. Inconclusive investigations still produce reports.
 
-Speech follows the researcher's question language. Spoken updates are rewritten through OpenAI when its key is available, then synthesized through Fish Audio when `FISH_API_KEY` is configured, ElevenLabs otherwise when configured, or OpenAI. `JESSE_FISH_VOICE` selects the Fish reference voice; an optional `JESSE_FISH_MODEL` sets its model header. Without an OpenAI key, Fish or ElevenLabs reads the original update. Audio is cached by personality, writing instructions, writer model, provider and voice so changes take effect on the next request. Voice milestone acceptance still requires a demonstrated spoken correction and brief spoken response.
+Speech follows the researcher's question language. OpenAI rewrites every spoken update in the run's selected character; its assigned provider then synthesizes it. Pinkman requires both the OpenAI writer key and `FISH_API_KEY`; the lab colleague requires an OpenAI key. Missing keys, rewrite failures and synthesis failures never switch providers or speak raw status text. Legacy per-provider voice overrides are ignored; the persona is the single selection. Old runs without a saved persona use Pinkman. Audio caches include the persona, writing instructions, writer model and assigned voice. Voice milestone acceptance still requires a demonstrated spoken correction and brief spoken response.
 
 ## Construction sequence
 

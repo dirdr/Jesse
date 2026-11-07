@@ -64,7 +64,7 @@ export function ReportSheet({
           </div>
         </SheetHeader>
         <div className="px-4 py-5">
-          {outcome?.reason && <p className="mb-5 rounded-xl bg-muted/60 p-3 text-sm text-muted-foreground">{outcome.reason}</p>}
+          {outcome?.reason && <p className="mb-5 rounded-sm bg-muted/60 p-3 text-sm text-muted-foreground">{outcome.reason}</p>}
           {report ? (
             <article className="report text-sm leading-relaxed">
               <ReactMarkdown

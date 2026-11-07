@@ -28,12 +28,13 @@ interface HeaderProps {
   mic: ReactNode
   speech: { available: boolean; on: boolean; toggle: () => void }
   menu?: ReactNode
+  persona?: ReactNode
 }
 
-export function Header({ snapshot, hasRun, replay, reportReady, onStop, onNew, onReport, mic, speech, menu }: HeaderProps) {
+export function Header({ snapshot, hasRun, replay, reportReady, onStop, onNew, onReport, mic, speech, menu, persona }: HeaderProps) {
   const question = snapshot?.events.find((event) => event.author === "researcher")?.text ?? snapshot?.selection?.question
   return (
-    <header className="sticky top-0 z-20 border-b border-border/60 bg-background/75 backdrop-blur-xl">
+    <header className="sticky top-0 z-20 border-b border-border bg-background/90 backdrop-blur">
       <div className="mx-auto flex min-h-14 max-w-[1600px] flex-wrap items-center justify-between gap-x-4 gap-y-2 px-4 py-2 sm:px-6">
         <div className="flex min-w-0 flex-1 items-center gap-3">
           {menu}
@@ -51,6 +52,7 @@ export function Header({ snapshot, hasRun, replay, reportReady, onStop, onNew, o
         </div>
 
         <div className="flex items-center gap-1.5">
+          {persona}
           <StatusBadge status={snapshot?.status ?? "idle"} />
           {mic}
           {hasRun && speech.available && (

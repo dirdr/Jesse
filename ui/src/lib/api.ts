@@ -2,6 +2,12 @@
 
 export type Author = "researcher" | "jesse" | "controller"
 
+export type PersonaId = "pinkman" | "plain"
+export interface PersonaState {
+  selected: PersonaId
+  personas: { id: PersonaId; name: string; available: boolean }[]
+}
+
 export interface ConversationEvent {
   id: string
   kind: string
@@ -32,6 +38,7 @@ export interface Selection {
 
 export interface Snapshot {
   run_id: string
+  persona: PersonaId
   active: boolean
   status: RunStatus
   can_message: boolean
@@ -159,7 +166,9 @@ export const api = {
   report: (url: string) => request<string>(url),
   live: (id: string) => request<LiveState>(`/api/runs/${id}/live`),
   frameUrl: (id: string, index: number) => `/api/runs/${id}/frames/${index}`,
-  speechAvailable: () => request<{ available: boolean }>("/api/speech"),
+  personas: () => request<PersonaState>("/api/personas"),
+  selectPersona: (id: PersonaId) => request<PersonaState>("/api/persona", { method: "POST", body: JSON.stringify({ id }) }),
+  speechAvailable: (runId?: string | null) => request<{ available: boolean }>(runId ? `/api/speech?run_id=${encodeURIComponent(runId)}` : "/api/speech"),
   speechUrl: (id: string, eventId: string) => `/api/runs/${id}/speech/${eventId}`,
   stepSpeechUrl: (id: string, index: number) => `/api/runs/${id}/speech/steps/${index}`,
   actionSpeechUrl: (id: string, index: number) => `/api/runs/${id}/speech/actions/${index}`,

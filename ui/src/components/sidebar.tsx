@@ -32,8 +32,8 @@ function RunItem({ run, selected, onOpen }: { run: RunSummary; selected: boolean
       onClick={() => onOpen(run)}
       aria-current={selected ? "page" : undefined}
       className={cn(
-        "group flex w-full flex-col gap-1 rounded-xl px-3 py-2 text-left transition-colors hover:bg-sidebar-accent",
-        selected && "bg-sidebar-accent",
+        "group flex w-full flex-col gap-1 rounded-sm border-l-2 border-transparent px-3 py-2 text-left transition-colors hover:bg-sidebar-accent",
+        selected && "border-brand bg-sidebar-accent",
       )}
     >
       <span className="line-clamp-2 text-sm leading-snug font-medium text-sidebar-foreground">{run.question}</span>
@@ -88,10 +88,10 @@ export function SidebarContent({
           <Logo />
         </button>
       </div>
-      <Button onClick={onNew} variant="outline" className="justify-start rounded-xl">
+      <Button onClick={onNew} className="justify-start bg-hazard font-semibold text-hazard-foreground hover:bg-hazard/85">
         <Plus /> New investigation
       </Button>
-      <div className="flex items-center gap-2 rounded-xl px-3 py-2 text-xs text-muted-foreground ring-1 ring-sidebar-border ring-inset">
+      <div className="flex items-center gap-2 rounded-sm px-3 py-2 text-xs text-muted-foreground ring-1 ring-sidebar-border ring-inset">
         <FlaskConical className="size-3.5 shrink-0 text-brand" />
         <span className="truncate" title={scope}>
           {scope}

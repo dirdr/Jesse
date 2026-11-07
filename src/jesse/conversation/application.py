@@ -11,6 +11,7 @@ from datetime import datetime, timezone
 from uuid import uuid4
 
 from jesse.runtime import conversation_event, save_json
+from jesse.personality import get_persona, run_persona
 
 
 def read_json(path: Path, default=None):
@@ -46,6 +47,7 @@ class RunManager:
         self.root = root.resolve()
         self.context = context
         self.contexts = contexts.resolve() if contexts else None
+        self.persona = get_persona().id
         self.root.mkdir(parents=True, exist_ok=True)
         self.popen = popen
         self.send_message = send_message or self._send_message
@@ -68,6 +70,7 @@ class RunManager:
             run_id = uuid4().hex
             folder = self.root / run_id
             folder.mkdir()
+            save_json(folder, "persona.json", {"id": self.persona})
             conversation_event(folder, "question", question, author="researcher")
             try:
                 with (folder / "worker.log").open("w", encoding="utf-8") as log:
@@ -77,12 +80,20 @@ class RunManager:
                         command += ["--context", self.context]
                     if self.contexts:
                         command += ["--contexts", str(self.contexts)]
-                    self.process = self.popen(command, stdout=log, stderr=log, start_new_session=True)
+                    self.process = self.popen(command, stdout=log, stderr=log, start_new_session=True,
+                                              env={**os.environ, "JESSE_PERSONA": self.persona})
             except Exception:
                 save_json(folder, "outcome.json", {"outcome": "blocked", "reason": "The investigation worker could not start."})
                 raise
             self.current_id = run_id
             return run_id
+
+    def select_persona(self, persona_id: str) -> None:
+        with self.lock:
+            persona = get_persona(persona_id)
+            if self.process is not None and self.process.poll() is None:
+                raise ValueError("Choose a persona before starting the next investigation.")
+            self.persona = persona.id
 
     def history(self) -> list[dict]:
         rows = []
@@ -113,7 +124,7 @@ class RunManager:
         status = ("waiting" if state == "idle" else "running" if session.get("id") else "planning") if active else (outcome or {}).get("outcome", "blocked")
         if not active and outcome is None:
             outcome = {"outcome": "blocked", "reason": "The worker is no longer running. Inspect the local worker log; no scientific conclusion was accepted."}
-        return {"run_id": run_id, "active": active, "status": status,
+        return {"run_id": run_id, "active": active, "status": status, "persona": run_persona(folder).id,
                 "can_message": active and bool(session.get("id")),
                 "agent_view_url": session.get("agent_view_url"), "events": events,
                 "outcome": outcome, "report_available": report.exists(),

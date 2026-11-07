@@ -12,7 +12,7 @@ import httpx
 from jesse.conversation import speech
 from jesse.conversation.application import RunManager
 from jesse.conversation.web import create_app
-from jesse.personality import LAB_PARTNER, PLAIN, delivery_instructions
+from jesse.personality import LAB_PARTNER, PLAIN, get_persona
 from jesse.investigating.runner import build_prompt
 from context_fixtures import synthetic_context
 
@@ -61,7 +61,7 @@ class SpeechPipelineTests(unittest.TestCase):
                 self.assertEqual(url, speech.FISH_URL)
                 self.assertEqual(kwargs["headers"]["Authorization"], "Bearer fish-test")
                 self.assertEqual(kwargs["headers"]["model"], "s2-pro")
-                self.assertEqual(kwargs["json"], {"text": LINE, "reference_id": "selected-voice", "format": "mp3"})
+                self.assertEqual(kwargs["json"], {"text": LINE, "reference_id": speech.FISH_VOICE, "format": "mp3"})
                 return httpx.Response(200, content=b"ID3fish-audio", request=httpx.Request("POST", url))
 
             with mock.patch("httpx.post", side_effect=post):
@@ -78,6 +78,7 @@ class SpeechPipelineTests(unittest.TestCase):
 
     def test_plain_mode_reaches_operator_writer_and_openai_delivery(self):
         with mock.patch.dict("os.environ", {"OPENAI_KEY": "test", "JESSE_PERSONA": "plain"}, clear=True):
+            persona = get_persona()
             prompt = build_prompt(synthetic_context(), "web", "Compare coolant.")
             self.assertIn(PLAIN, prompt)
             self.assertNotIn(LAB_PARTNER, prompt)
@@ -90,27 +91,41 @@ class SpeechPipelineTests(unittest.TestCase):
                             request=httpx.Request("POST", speech.SPEECH_URL))) as post:
                 self.assertEqual(speech._synthesize(text), b"mp3")
                 self.assertEqual(post.call_args.kwargs["json"]["input"], text)
-                self.assertEqual(post.call_args.kwargs["json"]["instructions"], delivery_instructions())
+                self.assertEqual(post.call_args.kwargs["json"]["instructions"], persona.delivery)
+                self.assertEqual(post.call_args.kwargs["json"]["voice"], persona.voice)
 
-    def test_cache_changes_with_personality_provider_voice_and_writer(self):
+    def test_pinned_persona_ignores_legacy_voice_overrides_and_other_personas_have_separate_caches(self):
         with tempfile.TemporaryDirectory() as directory, mock.patch.dict("os.environ", {}, clear=True):
             folder = write_run(Path(directory))
+            (folder / "persona.json").write_text(json.dumps({"id": "pinkman"}))
             synthesize = mock.Mock(return_value=b"mp3")
             translate = lambda text, question: text
-            paths = [speech.cached_speech(folder, EVENT, synthesize, translate)]
+            original = speech.cached_speech(folder, EVENT, synthesize, translate)
             for setting in ({"JESSE_PERSONA": "plain"}, {"FISH_API_KEY": "test"},
                             {"JESSE_FISH_VOICE": "other-voice"}, {"JESSE_FISH_MODEL": "s2-pro"},
-                            {"JESSE_SPEECH_MODEL": "other-writer"}):
+                            {"JESSE_TTS_VOICE": "other-voice"}):
                 os.environ.update(setting)
-                paths.append(speech.cached_speech(folder, EVENT, synthesize, translate))
-            self.assertEqual(len(set(paths)), len(paths))
-            self.assertEqual(synthesize.call_count, len(paths))
+                self.assertEqual(speech.cached_speech(folder, EVENT, synthesize, translate), original)
+            (folder / "persona.json").write_text(json.dumps({"id": "plain"}))
+            neutral = speech.cached_speech(folder, EVENT, synthesize, translate)
+            self.assertNotEqual(original, neutral)
+            os.environ["JESSE_SPEECH_MODEL"] = "other-writer"
+            self.assertNotEqual(speech.cached_speech(folder, EVENT, synthesize, translate), neutral)
+            self.assertEqual(synthesize.call_count, 3)
 
-    def test_fish_only_works_without_an_openai_writer(self):
+    def test_missing_writer_cannot_fall_back_to_plain_status(self):
         with mock.patch.dict("os.environ", {"FISH_API_KEY": "test"}, clear=True):
-            self.assertTrue(speech.speech_available())
+            self.assertFalse(speech.speech_available())
             with mock.patch("httpx.post") as post:
-                self.assertEqual(speech._translate("Opening the lab.", "Compare coolant."), "Opening the lab.")
+                with self.assertRaises(RuntimeError):
+                    speech._translate("Opening the lab.", "Compare coolant.")
+                post.assert_not_called()
+
+    def test_missing_fish_key_does_not_switch_to_another_provider(self):
+        with mock.patch.dict("os.environ", {"OPENAI_KEY": "test", "ELEVENLABS_API_KEY": "other"}, clear=True):
+            with mock.patch("httpx.post") as post:
+                with self.assertRaises(RuntimeError):
+                    speech._synthesize(LINE, get_persona("pinkman"))
                 post.assert_not_called()
 
     def test_fish_error_surfaces_as_502_without_caching_or_switching_voices(self):

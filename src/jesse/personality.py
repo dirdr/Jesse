@@ -1,5 +1,8 @@
-"""Jesse's shared character for the operator, spoken wording and voice delivery."""
+"""A persona bundles the operator's character, spoken wording and matching voice."""
+from dataclasses import dataclass
+import json
 import os
+from pathlib import Path
 
 
 LAB_PARTNER = """You are Jesse, a lab assistant whose conversational writing sounds like Jesse Pinkman
@@ -29,28 +32,39 @@ PLAIN = (
     "Keep wording neutral and factual, without slang or jokes. Keep scientific reports precise and professional."
 )
 
-LAB_PARTNER_DELIVERY = (
-    "Speak like a warm, capable lab partner chatting beside the bench. Relaxed, conversational rhythm, "
-    "with a little cheeky energy and a light smile on playful lines. Let dry humour land with a small natural "
-    "pause; keep excitement restrained and earned. Use a steady, matter-of-fact tone for uncertainty, "
-    "failed attempts and blockers. Read numbers and units clearly, slowing slightly for measurements. "
-    "Speak only the supplied text, in its language with a natural native accent."
-)
 
-PLAIN_DELIVERY = (
-    "Calm, conversational lab update at a steady pace. State uncertainty and blockers matter-of-factly. "
-    "Read numbers and units clearly. Speak only the supplied text, in its language with a natural native accent."
-)
+@dataclass(frozen=True)
+class Persona:
+    id: str
+    name: str
+    instructions: str
+    provider: str
+    model: str
+    voice: str
+    delivery: str = ""
 
 
-def pinkman() -> bool:
-    """The lab-partner personality is the default; plain is an explicit opt-out."""
-    return os.environ.get("JESSE_PERSONA", "pinkman").strip().lower() != "plain"
+PERSONAS = {
+    "pinkman": Persona("pinkman", "Jesse Pinkman", LAB_PARTNER, "fish", "s2-pro", "ecef5efd79bb49c7bcbf3511fff8d20c"),
+    "plain": Persona("plain", "Lab colleague", PLAIN, "openai", "gpt-4o-mini-tts", "ash",
+                     "Calm, natural lab update. Read numbers and units clearly. Speak the supplied text in its language."),
+}
+
+
+def get_persona(persona_id: str | None = None) -> Persona:
+    selected = persona_id if persona_id is not None else (os.environ.get("JESSE_PERSONA", "").strip().lower() or "pinkman")
+    if selected not in PERSONAS:
+        raise ValueError(f"Unknown persona: {selected}")
+    return PERSONAS[selected]
+
+
+def run_persona(folder: Path) -> Persona:
+    """A run's recorded selection takes precedence over later settings changes."""
+    path = folder / "persona.json"
+    if path.exists():
+        return get_persona(json.loads(path.read_text(encoding="utf-8"))["id"])
+    return get_persona("pinkman")  # Older runs predate the selector; they use the default.
 
 
 def character() -> str:
-    return LAB_PARTNER if pinkman() else PLAIN
-
-
-def delivery_instructions() -> str:
-    return LAB_PARTNER_DELIVERY if pinkman() else PLAIN_DELIVERY
+    return get_persona().instructions

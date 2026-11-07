@@ -1,6 +1,6 @@
 import { useEffect, useMemo, useRef } from "react"
 import { motion } from "motion/react"
-import { CheckCircle2, Circle, FlaskConical, Loader2, User } from "lucide-react"
+import { FlaskConical, User } from "lucide-react"
 import { cn } from "@/lib/utils"
 import { actionStyle, describe } from "@/lib/actions"
 import { KINDS, TONE_CLASS } from "@/lib/kinds"
@@ -9,9 +9,9 @@ import type { Action, ConversationEvent, Measurement, PlanGoal } from "@/lib/api
 
 export function Panel({ title, aside, children, className }: { title: string; aside?: React.ReactNode; children: React.ReactNode; className?: string }) {
   return (
-    <section className={cn("flex min-h-0 flex-col rounded-2xl border border-border/70 bg-card/70 backdrop-blur", className)}>
-      <header className="flex items-center justify-between gap-2 px-4 pt-3.5 pb-2">
-        <h2 className="text-xs font-semibold tracking-wide text-muted-foreground uppercase">{title}</h2>
+    <section className={cn("flex min-h-0 flex-col rounded-md border border-border bg-card", className)}>
+      <header className="flex items-center justify-between gap-2 border-b border-border px-4 py-2.5">
+        <h2 className="text-sm font-semibold">{title}</h2>
         {aside}
       </header>
       {children}
@@ -31,9 +31,9 @@ export function PlanPanel({ plan }: { plan: PlanGoal[] }) {
         </span>
       }
     >
-      <div className="mx-4 mb-2 h-1 overflow-hidden rounded-full bg-muted">
+      <div className="mx-4 mt-3 mb-2 h-1.5 overflow-hidden rounded-sm bg-muted">
         <motion.div
-          className="h-full rounded-full bg-gradient-to-r from-brand to-brand-2"
+          className="h-full bg-crystal"
           animate={{ width: `${(done / plan.length) * 100}%` }}
           transition={{ type: "spring", stiffness: 120, damping: 20 }}
         />
@@ -44,14 +44,16 @@ export function PlanPanel({ plan }: { plan: PlanGoal[] }) {
           const isRunning = /run|progress|active/.test(goal.status)
           return (
             <li key={index} className="flex items-start gap-2.5 py-1 text-sm">
-              {isDone ? (
-                <CheckCircle2 className="mt-0.5 size-4 shrink-0 text-success" />
-              ) : isRunning ? (
-                <Loader2 className="mt-0.5 size-4 shrink-0 animate-spin text-brand" />
-              ) : (
-                <Circle className="mt-0.5 size-4 shrink-0 text-muted-foreground/50" />
-              )}
-              <span className={cn("leading-snug", isDone ? "text-muted-foreground" : isRunning ? "font-medium" : "text-muted-foreground")}>
+              <span
+                className={cn(
+                  "grid h-6 w-7 shrink-0 place-items-center rounded-sm border font-mono text-[11px] font-semibold tabular-nums",
+                  isDone ? "border-brand bg-brand text-primary-foreground dark:text-background" : isRunning ? "border-crystal bg-crystal/15 text-crystal" : "border-border text-muted-foreground",
+                )}
+                aria-hidden
+              >
+                {String(index + 1).padStart(2, "0")}
+              </span>
+              <span className={cn("pt-0.5 leading-snug", isDone ? "text-muted-foreground" : isRunning ? "font-medium" : "text-muted-foreground")}>
                 {goal.title}
               </span>
             </li>
@@ -83,15 +85,15 @@ export function MeasurementsPanel({ measurements }: { measurements: Measurement[
               key={row.id}
               initial={{ y: 6 }}
               animate={{ y: 0 }}
-              className="rounded-xl border border-border/60 bg-background/60 p-3"
+              className="rounded-sm border border-border bg-background/70 p-3"
             >
               <div className="flex items-baseline justify-between gap-2">
                 <span className="font-mono text-xs font-medium">{row.id}</span>
               </div>
-              {row.result && <div className="mt-1 text-lg font-semibold tracking-tight tabular-nums">{row.result}</div>}
+              {row.result && <div className="mt-1 font-mono text-lg font-semibold text-crystal tabular-nums">{row.result}</div>}
               <div className="mt-2 flex flex-wrap gap-1.5">
                 {Object.entries(row.fields).filter(([key]) => varied.has(key)).map(([key, value]) => (
-                  <span key={key} className="rounded-md bg-muted px-1.5 py-0.5 font-mono text-[11px] text-muted-foreground">
+                  <span key={key} className="rounded-sm bg-muted px-1.5 py-0.5 font-mono text-[11px] text-muted-foreground">
                     {key} <span className="text-foreground">{value}</span>
                   </span>
                 ))}
@@ -148,7 +150,7 @@ export function ActivityPanel({
                   disabled={item.action.frame === null}
                   onClick={() => item.action.frame !== null && onSelectFrame(item.action.frame)}
                   className={cn(
-                    "group flex w-full items-start gap-2.5 rounded-lg px-2 py-1.5 text-left transition hover:bg-muted/70",
+                    "group flex w-full items-start gap-2.5 rounded-sm px-2 py-1.5 text-left transition hover:bg-muted/70",
                     selectedFrame !== null && item.action.frame === selectedFrame && "bg-brand/10",
                   )}
                 >
@@ -183,7 +185,7 @@ function EventCard({ event }: { event: ConversationEvent }) {
   return (
     <div
       className={cn(
-        "rounded-xl border px-3 py-2 text-[13px] leading-snug",
+        "rounded-sm border px-3 py-2 text-[13px] leading-snug",
         researcher ? "border-brand/30 bg-brand/8" : "border-border/70 bg-background/70",
       )}
     >

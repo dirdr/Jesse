@@ -32,22 +32,27 @@ export function useSpeech(
   active: boolean,
   fresh: boolean,
   replay: boolean,
+  personaId = "pinkman",
 ) {
   const [available, setAvailable] = useState(false)
   const [on, setOn] = useState(readOn)
   const heard = useRef<Set<string> | null>(null)
-  const queue = useRef<string[]>([])
+  const queue = useRef<{ url: string; text: string }[]>([])
+  const [speaking, setSpeaking] = useState<string | null>(null)
   const playing = useRef<HTMLAudioElement | null>(null)
 
   useEffect(() => {
-    api.speechAvailable().then(({ available }) => setAvailable(available)).catch(() => setAvailable(false))
-  }, [])
+    let cancelled = false
+    api.speechAvailable(runId).then(({ available }) => { if (!cancelled) setAvailable(available) }).catch(() => { if (!cancelled) setAvailable(false) })
+    return () => { cancelled = true }
+  }, [runId, personaId])
 
   const silence = useCallback(() => {
     queue.current = []
     toast.dismiss("jesse-audio")
     playing.current?.pause()
     playing.current = null
+    setSpeaking(null)
   }, [])
 
   const blocked = useRef(false)
@@ -58,21 +63,30 @@ export function useSpeech(
   const next = useCallback(() => {
     if (playing.current || blocked.current) return
     if (!queue.current.length) {
-      // Nothing scheduled: say what the agent is doing now, skipping actions that happened in between.
       const current = narration.current
       const action = current?.action
-      if (!current?.enabled || !action || action.index <= narrated.current) return
-      if (Date.now() - lastEnded.current < NARRATION_GAP_MS) return
+      if (!current?.enabled || !action || action.index <= narrated.current) {
+        setSpeaking(null)
+        return
+      }
+      if (Date.now() - lastEnded.current < NARRATION_GAP_MS) {
+        setSpeaking(null)
+        return
+      }
       narrated.current = action.index
-      queue.current.push(api.actionSpeechUrl(current.runId, action.index))
+      queue.current.push({ url: api.actionSpeechUrl(current.runId, action.index), text: action.text ?? "" })
     }
-    const url = queue.current.shift()!
-    const audio = new Audio(url)
+    const item = queue.current.shift()!
+    const audio = new Audio(item.url)
     playing.current = audio
     const done = () => {
-      if (playing.current === audio) playing.current = null
+      if (playing.current !== audio) return
+      playing.current = null
       lastEnded.current = Date.now()
       next()
+    }
+    audio.onplaying = () => {
+      if (playing.current === audio) setSpeaking(item.text)
     }
     audio.onended = done
     audio.onerror = done
@@ -80,7 +94,8 @@ export function useSpeech(
       if (playing.current === audio) playing.current = null
       if (error instanceof DOMException && error.name === "NotAllowedError") {
         // The browser refuses sound until the page is clicked (e.g. after a refresh). Keep the update and resume on click.
-        queue.current.unshift(url)
+        queue.current.unshift(item)
+        setSpeaking(null)
         blocked.current = true
         toast("Click anywhere to hear Jesse", { id: "jesse-audio", duration: Infinity })
         const resume = () => {
@@ -120,10 +135,10 @@ export function useSpeech(
     if (!runId || !events) return
     // Announcements and the step the agent is starting, each spoken once.
     const steps = (plan ?? []).flatMap((goal, index) =>
-      /run|progress|active/.test(goal.status) ? [{ key: `step:${index}:${goal.title}`, url: api.stepSpeechUrl(runId, index) }] : [],
+      /run|progress|active/.test(goal.status) ? [{ key: `step:${index}:${goal.title}`, url: api.stepSpeechUrl(runId, index), text: goal.title }] : [],
     )
     const items = [
-      ...events.filter((event) => event.speak).map((event) => ({ key: event.id, url: api.speechUrl(runId, event.id) })),
+      ...events.filter((event) => event.speak).map((event) => ({ key: event.id, url: api.speechUrl(runId, event.id), text: event.text })),
       ...steps,
     ]
     if (heard.current === null) {
@@ -133,7 +148,7 @@ export function useSpeech(
     for (const item of items) {
       if (heard.current.has(item.key)) continue
       heard.current.add(item.key)
-      if (on && available && !replay) queue.current.push(item.url)
+      if (on && available && !replay) queue.current.push({ url: item.url, text: item.text })
     }
     next()
   }, [runId, events, plan, fresh, on, available, replay, next])
@@ -150,5 +165,5 @@ export function useSpeech(
     })
   }, [silence])
 
-  return { available: available && !replay, on, toggle }
+  return { available: available && !replay, on, toggle, speaking }
 }

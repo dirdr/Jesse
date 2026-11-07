@@ -14,17 +14,24 @@ import { MeasurementsPanel, PlanPanel } from "@/components/side-panels"
 import { SteerBar } from "@/components/steer-bar"
 import { OutcomeBadge, ReportSheet } from "@/components/details"
 import { useRun } from "@/lib/use-run"
+import { usePersonas } from "@/lib/use-personas"
+import { PersonaPicker } from "@/components/persona-picker"
 import { useVoice } from "@/lib/use-voice"
 import { useSpeech } from "@/lib/use-speech"
+import { useJesseLines } from "@/lib/use-jesse-lines"
 import { TranscriptPill, VoiceButton } from "@/components/voice"
+import { TalkingJesse } from "@/components/talking-jesse"
 
 export default function App() {
   const run = useRun()
+  const personas = usePersonas()
+  const personaId = run.snapshot?.persona ?? personas.selected
   const voice = useVoice((runId) => {
     window.history.replaceState(null, "", window.location.pathname)
     run.attach(runId, false, true)
   })
-  const speech = useSpeech(run.runId, run.snapshot?.events, run.live?.plan, run.live?.actions, Boolean(run.snapshot?.active), run.fresh, run.replay)
+  const speech = useSpeech(run.runId, run.snapshot?.events, run.live?.plan, run.live?.actions, Boolean(run.snapshot?.active), run.fresh, run.replay, personaId)
+  const line = useJesseLines(run.runId, run.snapshot?.events, run.fresh, run.replay, speech.available && speech.on)
   const mic = <VoiceButton state={voice.state} onToggle={voice.toggle} />
   const [pinned, setPinned] = useState<number | null>(null)
   const [reportOpen, setReportOpen] = useState(false)
@@ -88,11 +95,12 @@ export default function App() {
             mic={hasRun ? mic : null}
             speech={speech}
             menu={menu}
+            persona={<PersonaPicker state={personas} value={personaId} disabled={hasRun || run.busy || personas.pending} onSelect={(id) => void personas.select(id)} />}
           />
 
           {!hasRun ? (
             <main className="flex flex-1 px-4 sm:px-6">
-              <Launcher busy={run.busy} onStart={run.start} mic={mic} contexts={history.contexts} />
+              <Launcher busy={run.busy || personas.pending} onStart={run.start} mic={mic} />
             </main>
           ) : (
             <main className="mx-auto grid w-full max-w-[1600px] flex-1 grid-cols-1 gap-5 px-4 py-5 sm:px-6 xl:grid-cols-[minmax(0,1fr)_400px]">
@@ -107,7 +115,7 @@ export default function App() {
                   onPin={setPinned}
                 />
                 {finished && snapshot?.outcome ? (
-                  <div className="flex flex-wrap items-center gap-3 rounded-2xl border border-border/70 bg-card/70 px-4 py-3 backdrop-blur">
+                  <div className="flex flex-wrap items-center gap-3 rounded-md border border-border bg-card px-4 py-3">
                     <OutcomeBadge outcome={snapshot.outcome.outcome} />
                     <span className="flex-1" />
                     {run.report && (
@@ -130,6 +138,7 @@ export default function App() {
         </div>
       </div>
       <TranscriptPill state={voice.state} />
+      {personaId === "pinkman" && <TalkingJesse speaking={hasRun && !run.replay ? speech.speaking ?? line : null} />}
       <ReportSheet open={reportOpen} onOpenChange={setReportOpen} snapshot={snapshot} report={run.report} />
       <Toaster position="top-center" richColors />
     </TooltipProvider>

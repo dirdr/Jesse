@@ -10,7 +10,7 @@ export function SteerBar({ enabled, busy, onSend }: { enabled: boolean; busy: bo
   }
   return (
     <form
-      className="flex items-center gap-2 rounded-2xl border border-border/70 bg-card/70 p-1.5 pl-3 backdrop-blur focus-within:border-brand/50"
+      className="flex items-center gap-2 rounded-md border-2 border-foreground/70 bg-card p-1.5 pl-3 focus-within:border-hazard"
       onSubmit={(event) => {
         event.preventDefault()
         void send()

@@ -10,6 +10,7 @@ from jesse.contexts import ContextError, ResearchContext, load_contexts
 from jesse.investigating.runner import MODEL, run_investigation
 from jesse.preflight import check_surface, checks_payload
 from jesse.runtime import conversation_event
+from jesse.personality import get_persona
 from .adapters import HExperimentPlanner, PydanticExperimentPlanner
 from .application import select_experiment
 from .domain import PlannerUnavailable, Selection
@@ -84,6 +85,8 @@ def main(argv: list[str] | None = None) -> int:
     if args.run_dir is not None and (folder / "request.json").exists():
         parser.error("The supplied run directory already contains an investigation")
     folder.mkdir(parents=True, exist_ok=args.run_dir is not None)
+    if not (folder / "persona.json").exists():
+        save_json(folder, "persona.json", {"id": get_persona().id})
     print(f"Artifacts: {folder}", flush=True)
     model = args.planner_model or (os.environ.get("OPENAI_MODEL", "gpt-5-mini") if args.planner == "openai" else MODEL)
     request = {"run_id": folder.name, "question": args.question, "surface_preference": args.surface,

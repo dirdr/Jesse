@@ -12,6 +12,7 @@ from pydantic import BaseModel, Field
 from typing import Literal
 
 from jesse.contexts import ContextError, load_contexts
+from jesse.personality import PERSONAS, get_persona, run_persona
 from .application import RunManager
 from .live import cached_frame, live_state
 from .speech import cached_action_speech, cached_speech, cached_step_speech, speech_available
@@ -25,6 +26,10 @@ class ResearchQuestion(BaseModel):
 class ResearcherMessage(ResearchQuestion):
     event_id: str = Field(pattern=r"^[A-Za-z0-9_-]{1,80}$")
     source: Literal["text", "voice"] = "text"
+
+
+class PersonaSelection(BaseModel):
+    id: Literal["pinkman", "plain"]
 
 
 def create_app(manager: RunManager | None = None, voice: VoiceListener | None = None) -> FastAPI:
@@ -144,19 +149,39 @@ def create_app(manager: RunManager | None = None, voice: VoiceListener | None = 
         response.headers["Cache-Control"] = "private, max-age=86400, immutable"
         return response
 
+    @app.get("/api/personas")
+    def personas():
+        return {"selected": manager.persona, "personas": [
+            {"id": item.id, "name": item.name, "available": speech_available(item)} for item in PERSONAS.values()]}
+
+    @app.post("/api/persona")
+    def select_persona(body: PersonaSelection):
+        try:
+            manager.select_persona(body.id)
+        except ValueError as error:
+            raise HTTPException(409, str(error)) from None
+        return personas()
+
     @app.get("/api/speech")
-    def speech_state():
-        return {"available": speech_available()}
+    def speech_state(run_id: str | None = None):
+        try:
+            persona = run_persona(manager.folder(run_id)) if run_id else get_persona(manager.persona)
+        except (ValueError, FileNotFoundError):
+            raise HTTPException(404, "Investigation not found.") from None
+        return {"available": speech_available(persona)}
 
     @app.get("/api/runs/{run_id}/speech/{kind}/{index}")
     def indexed_speech(run_id: str, kind: Literal["steps", "actions"], index: int):
-        if not speech_available():
-            raise HTTPException(409, "Set FISH_API_KEY, ELEVENLABS_API_KEY or OPENAI_API_KEY to hear Jesse.")
         speak = cached_step_speech if kind == "steps" else cached_action_speech
         try:
-            path = speak(manager.folder(run_id), index)
+            folder = manager.folder(run_id)
+            if not speech_available(run_persona(folder)):
+                raise HTTPException(409, "Configure the speech keys for this run's selected persona.")
+            path = speak(folder, index)
         except (ValueError, FileNotFoundError):
             raise HTTPException(404, "Investigation not found.") from None
+        except HTTPException:
+            raise
         except Exception:
             raise HTTPException(502, "Jesse's voice could not be generated.") from None
         if path is None:
@@ -165,12 +190,15 @@ def create_app(manager: RunManager | None = None, voice: VoiceListener | None = 
 
     @app.get("/api/runs/{run_id}/speech/{event_id}")
     def speech(run_id: str, event_id: str):
-        if not speech_available():
-            raise HTTPException(409, "Set FISH_API_KEY, ELEVENLABS_API_KEY or OPENAI_API_KEY to hear Jesse.")
         try:
-            path = cached_speech(manager.folder(run_id), event_id)
+            folder = manager.folder(run_id)
+            if not speech_available(run_persona(folder)):
+                raise HTTPException(409, "Configure the speech keys for this run's selected persona.")
+            path = cached_speech(folder, event_id)
         except (ValueError, FileNotFoundError):
             raise HTTPException(404, "Investigation not found.") from None
+        except HTTPException:
+            raise
         except Exception:
             raise HTTPException(502, "Jesse's voice could not be generated.") from None
         if path is None:
