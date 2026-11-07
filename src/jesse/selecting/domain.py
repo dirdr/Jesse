@@ -25,6 +25,8 @@ class ExperimentDefinition:
     completion_criteria: tuple[str, ...]
     interaction_status: str
     maximum_trials: int = 2
+    source_urls: tuple[str, ...] = ()
+    launch_url: str | None = None
 
     def to_dict(self) -> dict:
         return asdict(self)
@@ -72,6 +74,26 @@ CATALOGUE = (
         analyzer="netlogo-enzyme-rate-comparison-v2",
         completion_criteria=("Two observed trials with distinct VOLUME", "Matching fixed conditions", "Readings linked to evidence", "Python comparison or explicit comparability blocker"),
         interaction_status="Web trials and analysis tool recorded; replay acceptance pending. Desktop implementation awaits interaction proof.",
+    ),
+    ExperimentDefinition(
+        experiment_id="chemcollective-coolant-feasibility",
+        application="ChemCollective", model="Measuring the heat capacity of an engine coolant (activity 92)",
+        supported_questions=("Estimate the specific heat capacity of Compound Y solution using insulated mixing calorimetry.",
+            "Compare a new coolant's heat absorbed per gram per degree with the supplied ethylene glycol reference and attempt one fresh verification trial."),
+        unsupported_questions=("Determine overall engine cooling performance or validate a physical coolant.",
+            "Physically test the reference in a second GUI experiment; only its supplied specific heat is available in this protocol.",
+            "Test arbitrary unknown chemicals, molecular polarity, or activities other than coolant activity 92."),
+        surfaces=("web",),
+        parameters=("Measured coolant and water volumes", "Stable initial solution temperatures", "Insulated sample containers and mixing vessel"),
+        measurements=("Actual volumes in mL", "Initial and final temperatures in °C", "Raw readings and evidence references"),
+        assumptions=("Simulator findings only", "Supplied reference 2.200 J/(g·°C)", "Compound Y density 2.78 g/mL",
+            "Water specific heat 4.184 J/(g·°C)", "Approximate water density 1.00 g/mL", "Negligible container heat capacity and mixing enthalpy", "Repeat and replay review pending"),
+        protocol_resource="jesse.experiments.coolant/protocol.md", analyzer="insulated-mixing-calorimetry-v1",
+        completion_criteria=("GUI transfers and actual temperature readings", "Python checks insulation and stable initial readings",
+            "Fresh independent verification attempt", "Evidence-linked report, inconclusive if verification is incomplete"),
+        interaction_status="Experimental: one assisted GUI trial and calculation recorded; temperature drift and incomplete repeat prevented acceptance. Revised compact protocol awaits live acceptance.",
+        source_urls=("https://chemcollective.org/activities/info/92", "https://chemcollective.org/assets/modules/activities/vlab/probs/freeze.doc"),
+        launch_url="https://chemcollective.org/vlab/92",
     ),
 )
 

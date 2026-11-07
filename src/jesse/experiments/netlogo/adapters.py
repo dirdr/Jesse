@@ -1,5 +1,4 @@
 """H API and filesystem implementations for desktop feasibility."""
-from dataclasses import asdict, is_dataclass
 from datetime import datetime, timezone
 import json
 from pathlib import Path
@@ -8,21 +7,8 @@ import time
 
 from jesse.recording.adapters import FileObservations
 from jesse.recording.domain import Observation
+from jesse.runtime import json_value
 from .ports import ExperimentRecords
-
-
-def json_value(value: Any) -> Any:
-    if hasattr(value, "model_dump"):
-        return value.model_dump(mode="json")
-    if is_dataclass(value):
-        return {key: json_value(item) for key, item in asdict(value).items()}
-    if isinstance(value, dict):
-        return {key: json_value(item) for key, item in value.items()}
-    if isinstance(value, (list, tuple)):
-        return [json_value(item) for item in value]
-    if isinstance(value, datetime):
-        return value.isoformat()
-    return value
 
 
 class HDesktopAgent:
