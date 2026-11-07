@@ -77,7 +77,8 @@ class HDesktopAgent:
         environment = (
             {"id": "netlogo-web", "kind": "web", "start_url": WEB_LAUNCH_URL, "mode": {"type": "visual", "width": 1280, "height": 900}}
             if self.surface == "web" else
-            {"id": "local-mac", "kind": "desktop", "shell": False}
+            # host=user_device makes the SDK start the local desktop bridge; without it no bridge serves screenshots.
+            {"id": "local-mac", "kind": "desktop", "host": "user_device", "shell": False}
         )
         handle = client.start_session(
             # Inline specs enable the SDK's automatic local desktop connection.
