@@ -12,6 +12,7 @@ from pydantic import BaseModel, Field
 from typing import Literal
 
 from .application import RunManager
+from .live import cached_frame, live_state
 
 
 class ResearchQuestion(BaseModel):
@@ -102,6 +103,27 @@ def create_app(manager: RunManager | None = None) -> FastAPI:
             return PlainTextResponse(path.read_text(encoding="utf-8"))
         except (ValueError, FileNotFoundError):
             raise HTTPException(404, "Report not available yet.") from None
+
+    @app.get("/api/runs/{run_id}/live")
+    def live(run_id: str):
+        try:
+            return live_state(manager.folder(run_id))
+        except (ValueError, FileNotFoundError):
+            raise HTTPException(404, "Investigation not found.") from None
+
+    @app.get("/api/runs/{run_id}/frames/{index}")
+    def frame(run_id: str, index: int):
+        try:
+            path = cached_frame(manager.folder(run_id), index)
+        except (ValueError, FileNotFoundError):
+            raise HTTPException(404, "Investigation not found.") from None
+        except Exception:
+            raise HTTPException(502, "The screenshot could not be fetched from H.") from None
+        if path is None:
+            raise HTTPException(404, "Screenshot not available.")
+        response = FileResponse(path, media_type="image/jpeg")
+        response.headers["Cache-Control"] = "private, max-age=86400, immutable"
+        return response
 
     return app
 
