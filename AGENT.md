@@ -1,10 +1,10 @@
-# Autonomous Lab Assistant
+# Jesse
 
 Status: planning draft. Record agreed decisions here; resolve the open choices and obtain the user's final shared-understanding confirmation before implementation.
 
 ## Product
 
-Build an autonomous research technician for software-based experimental investigations. One H agent selects a protocol, operates ChemCollective, analyzes measurements, investigates discrepancies, and produces a traceable scientific Markdown report.
+Jesse is an autonomous research technician for software-based experimental investigations. One H agent selects a protocol, operates ChemCollective, analyzes measurements, investigates discrepancies, and produces a traceable scientific Markdown report.
 
 An unknown experiment is an unknown sample or unanswered question within supported protocols and simulations. The agent may adapt measurements and move between supported activities. Findings describe the configured simulator and its assumptions.
 
