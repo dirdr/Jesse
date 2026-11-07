@@ -15,7 +15,10 @@ def gladia_listen(on_turn, on_partial, stopping: threading.Event) -> None:
     """Run the Gladia live preview until `stopping` is set; the last turn is still delivered."""
     import sounddevice
     from gladiaio_sdk import GladiaClient
+    from jesse.voice.gate import VoiceGate
     from jesse.voice.live import run_live_preview
+
+    gate = VoiceGate(margin_db=float(os.environ.get("JESSE_VOICE_GATE_DB") or 15))
 
     class StoppableStream:
         def __init__(self, **options):
@@ -32,7 +35,8 @@ def gladia_listen(on_turn, on_partial, stopping: threading.Event) -> None:
             # run_live_preview treats KeyboardInterrupt as "stop listening and flush final transcripts".
             if stopping.is_set():
                 raise KeyboardInterrupt
-            return self.stream.read(frames)
+            audio, overflowed = self.stream.read(frames)
+            return gate.process(bytes(audio)), overflowed
 
     run_live_preview(GladiaClient(), StoppableStream, on_turn=on_turn, on_partial=on_partial)
 

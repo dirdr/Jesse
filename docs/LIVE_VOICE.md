@@ -7,6 +7,11 @@ The controller captures the local microphone (macOS asks the terminal for microp
 to Gladia. Each completed turn starts a catalogue investigation, or, while a session accepts messages, is sent to it
 as a researcher correction (`source: "voice"`). The panel shows the partial transcript while listening.
 
+A local near-field gate (`jesse.voice.gate`) sends silence instead of audio unless a block is at least 15 dB louder
+than the room level measured over the last 15 s, so distant voices are not transcribed. The first second is used to
+measure the room. Raise `JESSE_VOICE_GATE_DB` in `.env` (for example 20) if other voices still get through; lower it
+if your own voice is cut. A headset microphone isolates best.
+
 ## Terminal preview
 
 This prototype streams microphone audio to Gladia, displays partial transcripts,
