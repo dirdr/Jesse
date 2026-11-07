@@ -16,7 +16,7 @@ Retain five stories: Result Detective, Protocol Reproducer, Hands-Free Technicia
 
 Q10 accepted for the MVP: one H agent with a lightweight Python controller. Revisit this boundary only when a concrete requirement justifies a change.
 
-Use one H reasoning and computer-use agent. A lightweight Python controller manages sessions, executes custom tools, validates records, persists state, and enforces budgets. H chooses GUI actions and follow-up experiments. The H SDK provides the session/tool-call loop; an additional orchestration framework is not required for the MVP.
+Use one H reasoning and computer-use agent. A lightweight Python controller manages sessions, executes custom tools, validates records, persists state, and enforces budgets. H chooses GUI actions and follow-up experiments. H's runtime manages the observation, model, action and tool loop; the SDK executes custom tools in our application while processing the session. An additional orchestration framework is not required for the MVP.
 
 Expose tools for retrieving protocols and previous findings, recording observations, writing contextual knowledge, running predefined analyses, and assembling reports. Retrieval and analysis are tools rather than additional agents.
 
@@ -25,6 +25,18 @@ Operate ChemCollective through its interface. Associate observed readings with s
 Use hosted H sessions and retain agent_view_url for live viewing and replay in H Agent View. Keep one backend executor for custom tools; additional observers remain read-only. The backend must remain running while tool execution is needed.
 
 Gladia supplies voice transcription. Spoken responses require a separate speech-output implementation. Devin and Linkup are outside the MVP.
+
+## H harness and extension boundaries
+
+H's harness is the runtime that connects screen observations, model decisions, GUI actions and tool results. Holo is the model used by that runtime. Public documentation describes H's own runtime; it does not identify a third-party orchestration framework underlying the hosted service.
+
+For the MVP, use the managed Agents API and its extension points: agent instructions, model selection, reasoning effort, skills, custom Python tools, browser or desktop environments, and structured output schemas. We configure this runtime rather than patch its hosted internals. Implement Jesse's chemistry-specific behavior through instructions, protocol retrieval, contextual knowledge recording, analysis and report tools.
+
+Local execution is a separate option. Client.local() runs H's supplied runtime on our machine and can use a hosted or self-hosted Holo model. Running a downloaded runtime locally does not establish that its internals are available to edit. Local mode has different capabilities from hosted sessions; verify observability and required features before changing execution mode.
+
+For complete control of the loop, the Models API supports implementing our own observation handling, action execution, tool dispatch, memory management, retries and stopping rules. Consider this only after documenting a requirement that the managed extension points cannot satisfy.
+
+The public HoloDesktop CLI repository now installs the CLI distributed with the hai-agents SDK. Its open-source license is not evidence that the entire hosted harness is open source. Treat client code, runtime implementation and model weights as distinct layers with their own capabilities and licenses.
 
 ## Architecture
 
@@ -120,6 +132,10 @@ PDF documentation is stored in docs/resources/. Coupon and credit-benefit handou
 - Density activity: https://chemcollective.org/activities/vlab/69
 - H custom tools: https://hub.hcompany.ai/agents-api/custom-tools
 - H Agent View: https://hub.hcompany.ai/agents-api/observe-and-steer
+- H agent configuration: https://hub.hcompany.ai/agents-api/agents/overview
+- H local runtime: https://hub.hcompany.ai/agents-api/local-runtime
+- H custom model loop: https://hub.hcompany.ai/models-api/build-an-agent/function-calling
+- HoloDesktop CLI source: https://github.com/hcompai/holo-desktop-cli
 - H setup: [getting-started guide](<docs/resources/H Company - Get Started with Agents API.pdf>)
 - H references: [technical resources](docs/resources/H_Company_Agents_API_Technical_Documentation.pdf)
 - Gladia references: [technical resources](docs/resources/Resources_Gladia_Technical_Documentation.pdf)
