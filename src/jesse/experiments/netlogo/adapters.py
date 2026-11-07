@@ -120,7 +120,7 @@ class FileExperimentRecords:
         first = not (self.folder / "session.json").exists()
         self._json("session.json", session)
         if first:
-            conversation_event(self.folder, "session", "The simulator is opening. Watch me work.", speak=True)
+            conversation_event(self.folder, "session", "Simulator opening.", speak=True)
         if session.get("agent_view_url"):
             print(f"Agent View: {session['agent_view_url']}", flush=True)
 

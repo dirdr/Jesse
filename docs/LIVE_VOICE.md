@@ -16,8 +16,8 @@ if your own voice is cut. A headset microphone isolates best.
 
 When an OpenAI key is set, the panel's speaker button reads Jesse's announcements aloud (experiment selection,
 simulator opening, each recorded trial, the outcome). The controller sends only those event texts to OpenAI
-text-to-speech (`gpt-4o-mini-tts`, voice `ash`, an original character voice) and caches the mp3 in the run folder.
-Each announcement is first localized to the language of the run's question (numbers, units and trial names unchanged); the spoken text is kept next to the mp3. Earlier history is never read aloud. Override with `JESSE_TTS_VOICE` or `JESSE_TTS_MODEL`.
+text-to-speech (`gpt-4o-mini-tts`, voice `ash`) and caches the mp3 in the run folder.
+Jesse also announces each plan step as the agent starts it. Every announcement is condensed to a terse status (at most 8 words) in the language of the run's question, numbers, units and trial names unchanged, and read in a neutral voice; the spoken text is kept next to the mp3. Earlier history is never read aloud. Override with `JESSE_TTS_VOICE` or `JESSE_TTS_MODEL`.
 
 ## Terminal preview
 

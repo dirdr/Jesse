@@ -4,7 +4,7 @@ from pathlib import Path
 import tempfile
 import unittest
 
-from jesse.conversation.speech import cached_speech
+from jesse.conversation.speech import cached_speech, cached_step_speech
 
 
 class SpeechTests(unittest.TestCase):
@@ -43,6 +43,21 @@ class TranslationFailureTests(unittest.TestCase):
 
             cached_speech(folder, event, lambda text: calls.append(text) or b"mp3", broken)
             self.assertEqual(calls, ["Done."])
+
+
+class StepSpeechTests(unittest.TestCase):
+    def test_current_plan_step_is_announced(self):
+        with tempfile.TemporaryDirectory() as directory:
+            folder = Path(directory)
+            plan = {"tool_name": "update_plan", "args": {"goals": [
+                {"title": "Open the model", "status": "done"}, {"title": "Trial 1: VOLUME 50", "status": "running"}]}}
+            (folder / "events.jsonl").write_text(json.dumps({"type": "AgentEvent", "timestamp": "t", "data": {
+                "kind": "policy_event", "content": "", "tool_reqs": [plan]}}) + "\n", encoding="utf-8")
+            calls = []
+            path = cached_step_speech(folder, 1, lambda text: calls.append(text) or b"mp3", lambda text, question: text)
+            self.assertTrue(path.exists())
+            self.assertEqual(calls, ["Step 2/2: Trial 1: VOLUME 50"])
+            self.assertIsNone(cached_step_speech(folder, 5, lambda text: b"", lambda text, question: text))
 
 
 if __name__ == "__main__":

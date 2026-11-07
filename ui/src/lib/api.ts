@@ -137,6 +137,7 @@ export const api = {
   frameUrl: (id: string, index: number) => `/api/runs/${id}/frames/${index}`,
   speechAvailable: () => request<{ available: boolean }>("/api/speech"),
   speechUrl: (id: string, eventId: string) => `/api/runs/${id}/speech/${eventId}`,
+  stepSpeechUrl: (id: string, index: number) => `/api/runs/${id}/speech/steps/${index}`,
   voice: () => request<VoiceState>("/api/voice"),
   voiceStart: () => request<VoiceState>("/api/voice/start", { method: "POST" }),
   voiceStop: () => request<VoiceState>("/api/voice/stop", { method: "POST" }),

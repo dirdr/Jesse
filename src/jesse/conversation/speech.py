@@ -2,6 +2,7 @@
 
 Only events marked `speak` in a run are synthesized; each is localized to the language of the run's question first.
 """
+import hashlib
 import json
 import os
 from pathlib import Path
@@ -11,17 +12,16 @@ SPEECH_URL = "https://api.openai.com/v1/audio/speech"
 CHAT_URL = "https://api.openai.com/v1/chat/completions"
 MODEL = "gpt-4o-mini-tts"
 VOICE = "ash"
-# An original character voice for Jesse; it does not imitate any real person.
+# The researcher knows what they want: Jesse reports state, it does not explain or perform.
 INSTRUCTIONS = (
-    "You are Jesse, a young lab assistant from the American Southwest. Casual, energetic, a little jumpy, "
-    "genuinely hyped about science. Speak fast with relaxed slang energy, but say every number and unit clearly. "
-    "Speak in the language of the text, with a natural native accent for that language."
+    "Brisk, neutral lab status readout. Calm and matter-of-fact, no enthusiasm, no pauses for effect. "
+    "Say every number and unit clearly. Speak in the language of the text with a natural native accent."
 )
 TRANSLATE = (
-    "You localize short spoken announcements from a lab assistant called Jesse. Rewrite the announcement in the "
-    "language the researcher used in their question, in a casual spoken tone. Keep every number, unit, trial name "
-    "and outcome exactly as given; do not add or remove facts. If it is already in that language, return it unchanged. "
-    "Reply with the announcement only."
+    "Turn this lab status into a terse spoken update of at most 8 words, in the language of the researcher's question. "
+    "Keep every number, unit, setting and trial name exactly. Use only facts and names present in the status; never "
+    "invent identifiers. For an experiment choice, just name the simulator and what is compared. No filler, no greeting, "
+    "no restating the question, no explanation, no opinion. Reply with the update only."
 )
 
 
@@ -86,12 +86,26 @@ def cached_speech(folder: Path, event_id: str, synthesize=None, translate=None) 
     """Return the mp3 for one spoken event, synthesizing it once and caching it in the run folder."""
     if not re.fullmatch(r"[a-f0-9]{32}", event_id):
         return None
-    path = folder / "speech" / f"{event_id}.mp3"
+    text = spoken_text(folder, event_id)
+    return None if text is None else _spoken(folder, event_id, text, synthesize, translate)
+
+
+def cached_step_speech(folder: Path, index: int, synthesize=None, translate=None) -> Path | None:
+    """Return the mp3 announcing one step of the agent's current plan."""
+    from .live import live_state
+
+    plan = live_state(folder)["plan"]
+    if not 0 <= index < len(plan):
+        return None
+    text = f"Step {index + 1}/{len(plan)}: {plan[index]['title']}"
+    key = "step-" + hashlib.sha256(text.encode()).hexdigest()[:16]
+    return _spoken(folder, key, text, synthesize, translate)
+
+
+def _spoken(folder: Path, key: str, text: str, synthesize, translate) -> Path:
+    path = folder / "speech" / f"{key}.mp3"
     if path.exists():
         return path
-    text = spoken_text(folder, event_id)
-    if text is None:
-        return None
     question = researcher_question(folder)
     if question:
         try:
@@ -100,7 +114,7 @@ def cached_speech(folder: Path, event_id: str, synthesize=None, translate=None) 
             pass  # Speak the original announcement rather than nothing.
     audio = (synthesize or _synthesize)(text)
     path.parent.mkdir(exist_ok=True)
-    (path.parent / f"{event_id}.txt").write_text(text, encoding="utf-8")
+    (path.parent / f"{key}.txt").write_text(text, encoding="utf-8")
     temporary = path.with_suffix(".tmp")
     temporary.write_bytes(audio)
     temporary.replace(path)

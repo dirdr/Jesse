@@ -18,7 +18,7 @@ export default function App() {
     window.history.replaceState(null, "", window.location.pathname)
     run.attach(runId, false, true)
   })
-  const speech = useSpeech(run.runId, run.snapshot?.events, run.fresh, run.replay)
+  const speech = useSpeech(run.runId, run.snapshot?.events, run.live?.plan, run.fresh, run.replay)
   const mic = <VoiceButton state={voice.state} onToggle={voice.toggle} />
   const [pinned, setPinned] = useState<number | null>(null)
   const [reportOpen, setReportOpen] = useState(false)

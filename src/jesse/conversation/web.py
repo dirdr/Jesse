@@ -13,7 +13,7 @@ from typing import Literal
 
 from .application import RunManager
 from .live import cached_frame, live_state
-from .speech import cached_speech, speech_available
+from .speech import cached_speech, cached_step_speech, speech_available
 from .voice import VoiceListener
 
 
@@ -132,6 +132,20 @@ def create_app(manager: RunManager | None = None, voice: VoiceListener | None = 
     @app.get("/api/speech")
     def speech_state():
         return {"available": speech_available()}
+
+    @app.get("/api/runs/{run_id}/speech/steps/{index}")
+    def step_speech(run_id: str, index: int):
+        if not speech_available():
+            raise HTTPException(409, "Set OPENAI_API_KEY or OPENAI_KEY to hear Jesse.")
+        try:
+            path = cached_step_speech(manager.folder(run_id), index)
+        except (ValueError, FileNotFoundError):
+            raise HTTPException(404, "Investigation not found.") from None
+        except Exception:
+            raise HTTPException(502, "Jesse's voice could not be generated.") from None
+        if path is None:
+            raise HTTPException(404, "No such step.")
+        return FileResponse(path, media_type="audio/mpeg")
 
     @app.get("/api/runs/{run_id}/speech/{event_id}")
     def speech(run_id: str, event_id: str):

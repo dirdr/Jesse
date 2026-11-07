@@ -1,5 +1,5 @@
 import { useCallback, useEffect, useRef, useState } from "react"
-import { api, type ConversationEvent } from "@/lib/api"
+import { api, type ConversationEvent, type PlanGoal } from "@/lib/api"
 
 const KEY = "jesse-speech"
 
@@ -16,7 +16,13 @@ function readOn(): boolean {
  * OpenAI text-to-speech. History is never read aloud: only events that appear after the page attached,
  * plus everything for a run started from this page.
  */
-export function useSpeech(runId: string | null, events: ConversationEvent[] | undefined, fresh: boolean, replay: boolean) {
+export function useSpeech(
+  runId: string | null,
+  events: ConversationEvent[] | undefined,
+  plan: PlanGoal[] | undefined,
+  fresh: boolean,
+  replay: boolean,
+) {
   const [available, setAvailable] = useState(false)
   const [on, setOn] = useState(readOn)
   const heard = useRef<Set<string> | null>(null)
@@ -53,16 +59,24 @@ export function useSpeech(runId: string | null, events: ConversationEvent[] | un
 
   useEffect(() => {
     if (!runId || !events) return
+    // Announcements and the step the agent is starting, each spoken once.
+    const steps = (plan ?? []).flatMap((goal, index) =>
+      /run|progress|active/.test(goal.status) ? [{ key: `step:${index}:${goal.title}`, url: api.stepSpeechUrl(runId, index) }] : [],
+    )
+    const items = [
+      ...events.filter((event) => event.speak).map((event) => ({ key: event.id, url: api.speechUrl(runId, event.id) })),
+      ...steps,
+    ]
     if (heard.current === null) {
-      heard.current = new Set(fresh ? [] : events.map((event) => event.id))
+      heard.current = new Set(fresh ? [] : items.map((item) => item.key))
     }
-    for (const event of events) {
-      if (heard.current.has(event.id)) continue
-      heard.current.add(event.id)
-      if (event.speak && on && available && !replay) queue.current.push(api.speechUrl(runId, event.id))
+    for (const item of items) {
+      if (heard.current.has(item.key)) continue
+      heard.current.add(item.key)
+      if (on && available && !replay) queue.current.push(item.url)
     }
     next()
-  }, [runId, events, fresh, on, available, replay, next])
+  }, [runId, events, plan, fresh, on, available, replay, next])
 
   const toggle = useCallback(() => {
     setOn((value) => {
