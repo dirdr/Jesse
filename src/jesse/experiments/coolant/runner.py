@@ -136,7 +136,7 @@ def execute(folder: Path, budget_seconds: int, interactive: bool = False, client
     try:
         handle = (client or Client(timeout=30)).start_session(agent={
             "name": "jesse-chemcollective-coolant", "description": "Experimental GUI calorimetry with evidence and researcher interaction",
-            "model": "holo4-27b", "environments": [{"id": "coolant-browser", "kind": "web", "start_url": ACTIVITY_URL,
+            "model": "holo4-27b", "reasoning_effort": "low", "environments": [{"id": "coolant-browser", "kind": "web", "start_url": ACTIVITY_URL,
                 "mode": {"type": "visual", "width": 1440, "height": 1000}}]},
             messages=(folder / "protocol.md").read_text(encoding="utf-8"),
             tools=[record_calorimetry, publish_update, acknowledge_researcher_message],

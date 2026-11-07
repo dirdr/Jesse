@@ -72,6 +72,8 @@ class HDesktopAgent:
                 "name": f"jesse-netlogo-{self.surface}",
                 "description": "Bounded NetLogo GUI feasibility test",
                 "model": "holo4-27b",
+                # Low effort roughly halves the per-step thinking time; the default was ~3.8 s per action.
+                "reasoning_effort": "low",
                 "environments": [environment],
             },
             messages=instructions, tools=[record_observation, analyze_measurements],
