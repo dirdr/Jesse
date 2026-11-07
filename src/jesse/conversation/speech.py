@@ -12,19 +12,23 @@ SPEECH_URL = "https://api.openai.com/v1/audio/speech"
 CHAT_URL = "https://api.openai.com/v1/chat/completions"
 MODEL = "gpt-4o-mini-tts"
 VOICE = "ash"
-# The researcher knows what they want: Jesse reports state, it does not explain or perform.
+# Jesse narrates like a confident expert: natural first-person sentences, strictly faithful to the lab status.
 INSTRUCTIONS = (
-    "Brisk, neutral lab status readout. Calm and matter-of-fact, no enthusiasm, no pauses for effect. "
-    "Say every number and unit clearly. Speak in the language of the text with a natural native accent."
+    "Confident, expert lab assistant giving a live readout to a researcher. Warm but assured, crisp and steady pace, "
+    "no hesitation. Say every number and unit clearly. Speak in the language of the text with a natural native accent."
 )
 TRANSLATE = (
-    "Turn this lab status into a terse spoken update of at most 8 words, written entirely in fluent natural "
-    "language of the researcher's question (translate every word, e.g. stockroom, workbench, water, button). "
-    "Only proper names of chemicals or assignments, like Compound Y or Coolant I, stay unchanged. "
-    "Keep every number, unit, setting and trial name exactly. Use only facts and names present in the status; never "
-    "invent identifiers. For an experiment choice, just name the simulator and what is compared. No filler, no greeting, "
-    "no restating the question, no explanation, no opinion. Reply with the update only."
+    "You are Jesse, the best lab assistant there is, narrating a live simulator experiment to a researcher who knows "
+    "exactly what they want. Write ONE short, natural, confident spoken sentence (at most 15 words), first person, "
+    "present tense, in the language of the researcher's question. Perfect grammar and spelling. Translate interface "
+    "terms naturally (stockroom, workbench, button, menu); keep chemical, assignment and simulator names as they are "
+    "(Compound Y, Coolant I, NetLogo). Keep every number and unit exact and say them the way a native speaker reads them. "
+    "Strictly faithful: state only facts present in the lab status. Never add quantities, temperatures, names or goals "
+    "that are not in it, and never drop a measured value. Sound sure of yourself: no hedging, no apologies, no talk of "
+    "failed attempts; say what you are doing now. No filler, no greeting, no restating the question. Reply with the sentence only."
 )
+# Fast and the most faithful of the models compared on real agent actions.
+WRITER_MODEL = "gpt-4.1"
 
 
 def openai_key() -> str:
@@ -67,7 +71,7 @@ def _translate(text: str, question: str) -> str:
     import httpx
 
     response = httpx.post(CHAT_URL, timeout=30, headers={"Authorization": f"Bearer {openai_key()}"},
-        json={"model": os.environ.get("OPENAI_MODEL") or "gpt-5-mini", "reasoning_effort": "minimal", "messages": [
+        json={"model": os.environ.get("JESSE_SPEECH_MODEL") or WRITER_MODEL, "messages": [
             {"role": "system", "content": TRANSLATE},
             {"role": "user", "content": f"Researcher question (reply in its language):\n{question}\n\nLab status:\n{text}"}]})
     response.raise_for_status()
