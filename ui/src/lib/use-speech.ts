@@ -1,4 +1,5 @@
 import { useCallback, useEffect, useRef, useState } from "react"
+import { toast } from "sonner"
 import { api, type ConversationEvent, type PlanGoal } from "@/lib/api"
 
 const KEY = "jesse-speech"
@@ -35,13 +36,17 @@ export function useSpeech(
 
   const silence = useCallback(() => {
     queue.current = []
+    toast.dismiss("jesse-audio")
     playing.current?.pause()
     playing.current = null
   }, [])
 
+  const blocked = useRef(false)
+
   const next = useCallback(() => {
-    if (playing.current || !queue.current.length) return
-    const audio = new Audio(queue.current.shift())
+    if (playing.current || blocked.current || !queue.current.length) return
+    const url = queue.current.shift()!
+    const audio = new Audio(url)
     playing.current = audio
     const done = () => {
       if (playing.current === audio) playing.current = null
@@ -49,7 +54,24 @@ export function useSpeech(
     }
     audio.onended = done
     audio.onerror = done
-    audio.play().catch(done)
+    audio.play().catch((error: unknown) => {
+      if (playing.current === audio) playing.current = null
+      if (error instanceof DOMException && error.name === "NotAllowedError") {
+        // The browser refuses sound until the page is clicked (e.g. after a refresh). Keep the update and resume on click.
+        queue.current.unshift(url)
+        blocked.current = true
+        toast("Click anywhere to hear Jesse", { id: "jesse-audio", duration: Infinity })
+        const resume = () => {
+          blocked.current = false
+          toast.dismiss("jesse-audio")
+          next()
+        }
+        document.addEventListener("pointerdown", resume, { once: true })
+        document.addEventListener("keydown", resume, { once: true })
+        return
+      }
+      next()
+    })
   }, [])
 
   useEffect(() => {
@@ -68,7 +90,8 @@ export function useSpeech(
       ...steps,
     ]
     if (heard.current === null) {
-      heard.current = new Set(fresh ? [] : items.map((item) => item.key))
+      // Joining a run already in progress: skip the history but say where it stands now (its latest update).
+      heard.current = new Set(fresh ? [] : items.slice(0, -1).map((item) => item.key))
     }
     for (const item of items) {
       if (heard.current.has(item.key)) continue
