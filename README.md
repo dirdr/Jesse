@@ -58,6 +58,8 @@ Open http://localhost:8080. The frontend serves the React assets and proxies the
 
 The image excludes `.env`, local runs and credentials. Containers use `.env` only at runtime. Native NetLogo desktop control stays in the local launcher. The current microphone implementation captures on the backend machine; browser microphone capture is a separate integration, so use text input in the containers.
 
+The `Publish images` GitHub Actions workflow publishes both amd64 images to GHCR with immutable `sha-<full commit>` tags, using GitHub's built-in token. Pin both tags together in the cluster chart when deploying an update.
+
 For a reverse proxy, configure `JESSE_ALLOWED_HOSTS` with the public hostname and `JESSE_PUBLIC_URL` with its HTTPS origin. The default local launcher still binds to loopback. `/healthz` provides the container health check.
 
 Kubernetes deployment files live in the cluster repository under `helm/jesse` and `apps/jesse.yaml`. The `jesse` namespace contains separate frontend and backend Deployments, a persistent run volume, the `jesse-env` Secret imported from the current `.env`, and a Traefik ingress for `jesse.adrienpelfresne.com`. Login credentials are stored in Secret `jesse-auth`; retrieve the password with:
