@@ -4,16 +4,8 @@ import { cn } from "@/lib/utils"
 const PHOTO = `${import.meta.env.BASE_URL}jesse-pinkman.png`
 const JAW = "polygon(30% 50%, 64% 50%, 63% 58%, 56% 64.5%, 47% 66.5%, 38% 64%, 31% 57%)"
 const SHAPES = [0, 0.35, 0.7, 1, 0.5, 0.15]
-const GREETINGS = ["Yo! Ask me a question, let's do some science.", "Yeah, science! What are we testing?", "Lab's ready. Just say the word."]
 
-export function TalkingJesse({ speaking: said }: { speaking: string | null }) {
-  const [greeting, setGreeting] = useState<string | null>(null)
-  useEffect(() => {
-    if (!greeting) return
-    const timer = window.setTimeout(() => setGreeting(null), 2600)
-    return () => window.clearTimeout(timer)
-  }, [greeting])
-  const speaking = said ?? greeting
+export function TalkingJesse({ speaking }: { speaking: string | null }) {
   const [open, setOpen] = useState(0)
   const [tilt, setTilt] = useState(0)
   const talking = Boolean(speaking)
@@ -35,24 +27,10 @@ export function TalkingJesse({ speaking: said }: { speaking: string | null }) {
 
   return (
     <div className="pointer-events-none fixed right-4 bottom-4 z-40 flex items-end gap-2 sm:right-6 sm:bottom-6">
-      {speaking && (
-        <div
-          role="status"
-          className="relative mb-10 max-w-[min(18rem,calc(100vw-9rem))] rounded-md border-2 border-foreground bg-card px-3 py-2 text-sm font-medium text-foreground shadow-lg"
-        >
-          <p className="line-clamp-4">{speaking}</p>
-          <span
-            aria-hidden
-            className="absolute -right-2 bottom-3 size-3 rotate-45 border-t-2 border-r-2 border-foreground bg-card"
-          />
-        </div>
-      )}
-      <button
-        type="button"
-        aria-label="Say hi to Jesse"
-        onClick={() => setGreeting(GREETINGS[Math.floor(Math.random() * GREETINGS.length)])}
+      <div
+        role="img"
+        aria-label="Jesse Pinkman"
         className={cn(
-          "pointer-events-auto cursor-pointer focus-visible:outline-2 focus-visible:outline-offset-2 focus-visible:outline-ring",
           "relative aspect-[273/365] w-24 origin-bottom overflow-hidden rounded-[45%_45%_40%_40%] border-[3px] border-foreground bg-black shadow-[4px_4px_0_0_var(--brand)] sm:w-32",
           !speaking && "opacity-80",
         )}
@@ -78,7 +56,7 @@ export function TalkingJesse({ speaking: said }: { speaking: string | null }) {
           className="pointer-events-none absolute inset-0 size-full select-none"
           style={{ clipPath: JAW, transform: `translateY(${open * 7}%)` }}
         />
-      </button>
+      </div>
     </div>
   )
 }

@@ -21,7 +21,6 @@ import { usePersonas } from "@/lib/use-personas"
 import { PersonaPicker } from "@/components/persona-picker"
 import { useVoice } from "@/lib/use-voice"
 import { useSpeech } from "@/lib/use-speech"
-import { useJesseLines } from "@/lib/use-jesse-lines"
 import { TranscriptPill, VoiceButton } from "@/components/voice"
 import { TalkingJesse } from "@/components/talking-jesse"
 
@@ -34,7 +33,6 @@ export default function App() {
     run.attach(runId, false, true)
   })
   const speech = useSpeech(run.runId, run.snapshot?.events, run.live?.plan, run.live?.actions, Boolean(run.snapshot?.active), run.fresh, run.replay, personaId)
-  const line = useJesseLines(run.runId, run.snapshot?.events, run.fresh, run.replay, speech.available && speech.on)
   const mic = <VoiceButton state={voice.state} onToggle={voice.toggle} />
   const [pinned, setPinned] = useState<number | null>(null)
   const [reportOpen, setReportOpen] = useState(false)
@@ -183,7 +181,7 @@ export default function App() {
         </div>
       </div>
       <TranscriptPill state={voice.state} />
-      {personaId === "pinkman" && <TalkingJesse speaking={hasRun && !run.replay ? speech.speaking ?? line : null} />}
+      {personaId === "pinkman" && <TalkingJesse speaking={hasRun && !run.replay ? speech.speaking : null} />}
       <ReportSheet open={reportOpen} onOpenChange={setReportOpen} snapshot={snapshot} report={run.report} error={run.reportError} onRetry={run.retryReport} onFollowUp={run.startFollowUp} />
       <Toaster position="top-center" richColors />
     </TooltipProvider>
