@@ -112,7 +112,7 @@ def report(lab):
     return "## Summary\n\n" + f"{len(lab.observations())} trial(s) recorded."
 ```
 
-`lab.record` saves the raw reading once, rejects conflicting retries, enforces `max_trials`, and stores any `analysis` dictionary separately from the raw reading. `fields` and `result` appear in the panel's measurement list. The optional `report(lab)` adds a section to `report.md`. `tools.py` runs as ordinary Python on your machine, so treat it like any other code you install.
+`lab.record` saves the raw reading once, rejects conflicting retries, enforces `max_trials`, and stores any `analysis` dictionary separately from the raw reading. `fields` and `result` appear in the panel's measurement list. The optional `report(lab)` adds a section to `report.md`. The optional `conclude(lab)` lets Python decide the outcome: return `("supported_conclusion", reason)` once the protocol's completion criteria are met, or `None` to keep the default (`inconclusive` with measurements, `blocked` without). Without it, a run never concludes on its own. The coolant context concludes when two checked estimates agree within 5 % on the same side of the reference. `tools.py` runs as ordinary Python on your machine, so treat it like any other code you install.
 
 ## Command line
 
