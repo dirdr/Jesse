@@ -32,19 +32,10 @@ export function useRun() {
     setRunId(id)
   }, [])
 
-  // Open ?run=<id> as a replay, otherwise resume the controller's investigation only while it is still running.
+  // Only explicit history links open an existing investigation.
   useEffect(() => {
     const requested = runFromUrl()
-    if (requested) {
-      attach(requested, true)
-      return
-    }
-    api
-      .current()
-      .then(async ({ run_id }) => {
-        if (run_id) attach(run_id, !(await api.snapshot(run_id)).active)
-      })
-      .catch(() => undefined)
+    if (requested) attach(requested, true)
   }, [attach])
 
   useEffect(() => {

@@ -3,7 +3,7 @@ import type { Action } from "@/lib/api"
 
 const STEP_MS = 1600
 
-export function usePlayback(runId: string | null, actions: Action[], onFrame: (frame: number | null) => void) {
+export function usePlayback(runId: string | null, actions: Action[], onFrame: (frame: number | null) => void, speechBusy = false) {
   const [focus, setFocus] = useState<number | null>(null)
   const [playing, setPlaying] = useState(false)
   const latest = useRef(actions)
@@ -28,7 +28,7 @@ export function usePlayback(runId: string | null, actions: Action[], onFrame: (f
   )
 
   useEffect(() => {
-    if (!playing) return
+    if (!playing || speechBusy) return
     const timer = window.setTimeout(
       () => {
         const next = (focus ?? -1) + 1
@@ -41,7 +41,7 @@ export function usePlayback(runId: string | null, actions: Action[], onFrame: (f
       focus === null ? 0 : STEP_MS,
     )
     return () => window.clearTimeout(timer)
-  }, [playing, focus, select])
+  }, [playing, focus, select, speechBusy])
 
   const toggle = useCallback(() => {
     if (!playing && (focus === null || focus >= latest.current.length - 1)) select(0)

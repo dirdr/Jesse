@@ -21,7 +21,7 @@ function readOn(): boolean {
 
 /**
  * Plays Jesse's spoken announcements (events with `speak`) one after another, using the controller's
- * OpenAI text-to-speech. History is never read aloud: only events that appear after the page attached,
+ * selected persona voice. History is never read aloud automatically: only events that appear after the page attached,
  * plus everything for a run started from this page.
  */
 export function useSpeech(
@@ -33,6 +33,9 @@ export function useSpeech(
   fresh: boolean,
   replay: boolean,
   personaId = "pinkman",
+  replayAction: Action | null = null,
+  replayPlaying = false,
+  onReplayBusy?: (busy: boolean) => void,
 ) {
   const [available, setAvailable] = useState(false)
   const [on, setOn] = useState(readOn)
@@ -119,17 +122,17 @@ export function useSpeech(
 
   useEffect(() => {
     narration.current = runId
-      ? { runId, action: latestNarratable(actions), enabled: on && available && active && !replay }
+      ? { runId, action: latestNarratable(actions), enabled: on && available && active && !replay && replayAction === null }
       : null
     next()
-  }, [runId, actions, on, available, active, replay, next])
+  }, [runId, actions, on, available, active, replay, replayAction, next])
 
   // Narration also needs a clock: the gap can elapse between polls.
   useEffect(() => {
     if (!runId || !active || replay) return
     const timer = window.setInterval(next, 1000)
     return () => window.clearInterval(timer)
-  }, [runId, active, replay, next])
+  }, [runId, active, replay, replayAction, next])
 
   useEffect(() => {
     if (!runId || !events) return
@@ -148,10 +151,44 @@ export function useSpeech(
     for (const item of items) {
       if (heard.current.has(item.key)) continue
       heard.current.add(item.key)
-      if (on && available && !replay) queue.current.push({ url: item.url, text: item.text })
+      if (on && available && !replay && replayAction === null) queue.current.push({ url: item.url, text: item.text })
     }
     next()
-  }, [runId, events, plan, fresh, on, available, replay, next])
+  }, [runId, events, plan, fresh, on, available, replay, replayAction, next])
+
+  // Replay uses the same cached persona audio as live narration. Hold the timeline
+  // while audio loads and plays so the next action cannot cut off its sentence.
+  const reviewing = replayAction !== null
+  useEffect(() => {
+    if (replay || reviewing) silence()
+    return silence
+  }, [replay, reviewing, silence])
+
+  useEffect(() => {
+    if (!runId || !replayAction || !replayPlaying || !on || !available) {
+      onReplayBusy?.(false)
+      return
+    }
+    if (SILENT_TOOLS.test(replayAction.tool) || !replayAction.text) return
+    const audio = new Audio(api.actionSpeechUrl(runId, replayAction.index))
+    let cancelled = false
+    onReplayBusy?.(true)
+    const done = () => {
+      if (cancelled) return
+      setSpeaking(null)
+      onReplayBusy?.(false)
+    }
+    audio.onplaying = () => { if (!cancelled) setSpeaking(replayAction.text ?? null) }
+    audio.onended = done
+    audio.onerror = done
+    void audio.play().catch(done)
+    return () => {
+      cancelled = true
+      audio.pause()
+      setSpeaking(null)
+      onReplayBusy?.(false)
+    }
+  }, [runId, replayAction, replayPlaying, on, available, onReplayBusy])
 
   const toggle = useCallback(() => {
     setOn((value) => {
@@ -165,5 +202,5 @@ export function useSpeech(
     })
   }, [silence])
 
-  return { available: available && !replay, on, toggle, speaking }
+  return { available, on, toggle, speaking }
 }

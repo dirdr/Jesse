@@ -32,7 +32,6 @@ export default function App() {
     window.history.replaceState(null, "", window.location.pathname)
     run.attach(runId, false, true)
   })
-  const speech = useSpeech(run.runId, run.snapshot?.events, run.live?.plan, run.live?.actions, Boolean(run.snapshot?.active), run.fresh, run.replay, personaId)
   const mic = <VoiceButton state={voice.state} onToggle={voice.toggle} />
   const [pinned, setPinned] = useState<number | null>(null)
   const [reportOpen, setReportOpen] = useState(false)
@@ -44,8 +43,10 @@ export default function App() {
   const snapshot = run.snapshot
   const finished = Boolean(snapshot && !snapshot.active)
   const actions = useMemo(() => live?.actions ?? [], [live?.actions])
-  const playback = usePlayback(run.runId, actions, setPinned)
+  const [replaySpeechBusy, setReplaySpeechBusy] = useState(false)
+  const playback = usePlayback(run.runId, actions, setPinned, replaySpeechBusy)
   const focused = playback.focus !== null ? actions[playback.focus] ?? null : null
+  const speech = useSpeech(run.runId, run.snapshot?.events, run.live?.plan, run.live?.actions, Boolean(run.snapshot?.active), run.fresh, run.replay, personaId, focused, playback.playing, setReplaySpeechBusy)
   const cutoff = focused ? Date.parse(focused.at) : pinned !== null ? Date.parse(live?.frames[pinned]?.at ?? "") : NaN
   const visibleAt = (at: string | null | undefined) => Number.isNaN(cutoff) || !at || Date.parse(at) <= cutoff
   const measurements = (live?.measurements ?? []).filter((row) => visibleAt(row.at))
@@ -181,7 +182,7 @@ export default function App() {
         </div>
       </div>
       <TranscriptPill state={voice.state} />
-      {personaId === "pinkman" && <TalkingJesse speaking={hasRun && !run.replay ? speech.speaking : null} />}
+      {personaId === "pinkman" && <TalkingJesse speaking={hasRun ? speech.speaking : null} />}
       <ReportSheet open={reportOpen} onOpenChange={setReportOpen} snapshot={snapshot} report={run.report} error={run.reportError} onRetry={run.retryReport} onFollowUp={run.startFollowUp} />
       <Toaster position="top-center" richColors />
     </TooltipProvider>

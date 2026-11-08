@@ -112,7 +112,7 @@ Notes are the Markdown files under `research/` (override with `--research` or `J
 
 `jesse "question"` runs one investigation with all notes; `--surface web|desktop` picks the surface and `--notes` lists the notes. Python checks preflight before starting H; an unavailable surface produces a blocked report. Anthropic credentials may be configured locally, but no Anthropic adapter is implemented.
 
-Persist the brief given to H (`protocol.md`), raw readings, units, screenshots, analyses and conclusions as ordinary files under `runs/<id>/` with stable trial identifiers: `observations/` holds raw readings, `analyses/` holds derived values. Retried identical writes are idempotent; conflicting writes and readings beyond the trial limit are rejected. Reports link to their evidence. The panel sidebar lists past runs for replay; later investigations do not automatically retrieve or learn from them.
+Persist the brief given to H (`protocol.md`), raw readings, units, screenshots, analyses and conclusions as ordinary files under `runs/<id>/` with stable trial identifiers: `observations/` holds raw readings, `analyses/` holds derived values. Retried identical writes are idempotent; conflicting writes and readings beyond the trial limit are rejected. Reports link to their evidence. Opening the panel without a run link shows the new investigation screen; it never automatically opens the controller’s latest run. Explicit `?run=<id>` links open history. Action replay speaks with the saved run persona (Pinkman for legacy runs), waits for narration before advancing, and stops audio when paused or left. The panel sidebar lists past runs for replay; later investigations do not automatically retrieve or learn from them.
 
 ## Autonomy and completion
 
