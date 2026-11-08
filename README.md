@@ -21,7 +21,8 @@ cp .env.example .env
 Set these keys in `.env`:
 
 - `HAI_API_KEY`: required to run the H agent.
-- `OPENAI_KEY`: enables the report's evidence-based verdict. Without it, results cannot receive a supported conclusion.
+- `OPENAI_KEY`: enables the report's evidence-based verdict and writes spoken updates. Without it, results cannot receive a supported conclusion.
+- `FISH_API_KEY`: enables Jesse Pinkman's voice through Fish Audio; requires `OPENAI_KEY` too. Optional for text-only use.
 
 Start the panel:
 
@@ -56,7 +57,7 @@ H controls your mouse and keyboard. Keep your hands off the controls during the 
 ## Optional
 
 - **Voice input:** set `GLADIA_API_KEY` and allow microphone access.
-- **Spoken replies:** set `OPENAI_KEY`; the default Pinkman persona also needs `FISH_API_KEY`. Select **Lab colleague** to use OpenAI speech.
+- **Spoken replies:** set `OPENAI_KEY` and `FISH_API_KEY`, restart Jesse, and select **Jesse Pinkman** before starting an experiment. Enable the speaker button in the panel. Select **Lab colleague** to use OpenAI speech with `OPENAI_KEY` alone.
 - **Your own experiments:** copy [research/_template.md](research/_template.md) to a new Markdown file in `research/` and describe your tools, controls, and required results. Jesse reads all notes before each run.
 
 See [AGENT.md](AGENT.md) for architecture and project decisions.
