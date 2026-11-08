@@ -125,6 +125,25 @@ class CoolantToolTests(unittest.TestCase):
         self.assertEqual(self.extension.analyze_reading(self.reading(samples_insulated=False))["status"], "needs_repeat")
         self.assertEqual(self.extension.analyze_reading(self.reading(final_c=90.0))["status"], "needs_repeat")
 
+    def finish_with(self, *final_temperatures):
+        with tempfile.TemporaryDirectory() as directory:
+            lab = Lab(Path(directory), self.context, "Q?", self.extension)
+            (tool,) = self.extension.tools(lab)
+            for index, final_c in enumerate(final_temperatures, 1):
+                tool(**self.reading(trial_id=f"trial-{index}", final_c=final_c))
+            outcome = lab.finish("Session finished.")
+            return outcome, json.loads((Path(directory) / "outcome.json").read_text())
+
+    def test_two_agreeing_checked_trials_support_a_conclusion(self):
+        outcome, saved = self.finish_with(46.82, 46.82)
+        self.assertEqual(outcome, "supported_conclusion")
+        self.assertIn("more heat", saved["reason"])
+        self.assertEqual(saved["verification"], "pending_replay_review")
+
+    def test_one_trial_or_disagreeing_trials_stay_inconclusive(self):
+        self.assertEqual(self.finish_with(46.82)[0], "inconclusive")
+        self.assertEqual(self.finish_with(46.82, 60.0)[0], "inconclusive")
+
     def test_tool_records_display_and_report_section(self):
         with tempfile.TemporaryDirectory() as directory:
             lab = Lab(Path(directory), self.context, "Q?", self.extension)

@@ -101,7 +101,7 @@ flowchart TB
 
 Extensibility lives in context folders. A new lab on an existing surface needs only a folder; it still needs its own interaction proof before its status changes from unverified.
 
-The scientific loop is plan → measure → analyze → verify or adapt → report. Outputs may be supported, inconclusive or blocked; current runs remain inconclusive pending evidence review, or blocked when a required capability is missing. A completed API turn is separate from a supported scientific conclusion.
+The scientific loop is plan → measure → analyze → verify or adapt → report. Outputs may be supported, inconclusive or blocked. A context may let Python conclude `supported_conclusion` once its completion criteria are met (coolant: two checked estimates within 5 % with the same comparison to the reference); the report still marks replay review as pending. Otherwise runs remain inconclusive, or blocked when a required capability is missing. A completed API turn is separate from a supported scientific conclusion.
 
 Keep one operator and one custom-tool executor. Additional agent providers or a read-only reviewer remain optional future extensions. Agent View observes execution; it does not replace the controller or execute custom tools.
 

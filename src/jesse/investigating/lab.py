@@ -94,6 +94,14 @@ class Lab:
     def finish(self, reason: str) -> str:
         observations = self.observations()
         outcome = "inconclusive" if observations else "blocked"
+        # A context may let Python decide a supported conclusion once its own completion criteria are met.
+        conclude = getattr(self.extension, "conclude", None)
+        if observations and callable(conclude):
+            verdict = conclude(self)
+            if verdict is not None:
+                outcome, reason = verdict
+                if outcome not in {"supported_conclusion", "inconclusive"}:
+                    raise ValueError(f"Invalid conclusion outcome: {outcome}")
         save_json(self.folder, "outcome.json", {"outcome": outcome, "reason": reason, "context": self.context.id,
                   "recorded_trials": len(observations), "verification": "pending_replay_review"})
         (self.folder / "report.md").write_text(self._report(outcome, reason, observations), encoding="utf-8")
