@@ -1,93 +1,56 @@
-![Jesse](jesse.png)
+# Jesse
 
-Jesse is a lab assistant that runs experiments in scientific software. You describe your research and usual tools in a few Markdown notes, then ask a question. Jesse proposes a plan, an H computer-use agent operates the tools on screen, Python records and analyzes each reading, and Jesse proposes the result with evidence.
+Jesse runs experiments in scientific software through an H computer-use agent, records measurements, and produces a report. Research notes in [research/](research/) tell it which tools to use and how to report results.
 
-Findings describe the tools used, not a physical laboratory.
+## Run locally
 
-## Architecture
+Install [uv](https://docs.astral.sh/uv/getting-started/installation/), [Node.js](https://nodejs.org/) 22 or newer, and [pnpm](https://pnpm.io/installation) 10.26 or newer. uv installs Python 3.13 automatically.
 
-![Jesse architecture: the Python backend drives one H agent and owns every record; each arrow names its protocol](docs/assets/architecture.png)
-
-Edit [docs/architecture.excalidraw](docs/architecture.excalidraw) in Excalidraw and re-export the PNG.
-
-## Quick start
-
-Requires [uv](https://docs.astral.sh/uv/), Node with pnpm, and an H API key.
+From the project folder:
 
 ```sh
-cp .env.example .env          # set HAI_API_KEY
-./launch_local.sh             # web; use ./launch_local.sh desktop to work on this Mac
+cp .env.example .env
 ```
 
-The launcher installs dependencies, builds the panel and opens http://127.0.0.1:8765. Try:
+Set these keys in `.env`:
 
-| Note | Question |
-| --- | --- |
-| `research/mechanics.md` | What is the gravity on Planet X? Measure it with the pendulum, and check whether mass changes the result. |
-| `research/forest-fire.md` | How does tree density change how much of a forest burns? Compare 55% and 70% density and repeat both. |
-| `research/thermochemistry.md` | Compare this new coolant with the reference and explain which absorbs more heat per gram. |
+- `HAI_API_KEY`: required to run the H agent.
+- `OPENAI_KEY`: enables the report's evidence-based verdict. Without it, results cannot receive a supported conclusion.
 
-Optional keys in `.env`: `OPENAI_KEY` for the outcome verdict, `GLADIA_API_KEY` for voice, `FISH_API_KEY` for the Pinkman voice.
-
-**Desktop runs** control your own Mac. Grant **Screen & System Audio Recording** and **Accessibility** to your terminal in System Settings → Privacy & Security. Keep your hands off the mouse during the run; press Esc twice to stop H.
-
-## Your research notes
-
-Each file in `research/` describes one research area. Jesse reads them all before every investigation. Copy `research/_template.md` to start; files starting with `_` are ignored.
-
-```markdown
-# Classical mechanics
-
-## Background
-What you study and the assumptions you work under.
-
-## Usual tools
-- **PhET Pendulum Lab**: https://phet.colorado.edu/...
-  What it measures, and tips such as which panel shows the reading.
-
-## How I like results
-Units, repeats and controls.
-```
-
-With these notes, Jesse:
-
-1. Proposes a plan (tool, settings to vary, trials, analysis), then waits about 20 seconds for a correction.
-2. Searches the web when it needs a method or reference value, and cites it. It operates only the tools in your notes unless you approve another.
-3. Records every reading from the screen and fits or summarizes recorded values with Python.
-4. Proposes the result with numbers, units, confidence and a next step.
-
-## The panel
-
-- **Live screen** shows what H sees, with each click marked.
-- **Lab notebook** shows each reading and the points Jesse writes down.
-- **Agent actions** lists every action with H's stated reason. Click one to rewind the screen and measurements to that step; press ▶ to replay the run.
-- **Correct or redirect Jesse** sends a correction to the live session. When you have rewound, the correction refers to that step.
-- **Voice**: press the microphone. The first turn starts a run; later turns become corrections. See [live voice setup](docs/LIVE_VOICE.md).
-- **History** in the sidebar replays any past run from `runs/`.
-
-Each run ends **supported**, **inconclusive** or **blocked**. An OpenAI model judges the recorded readings and Python analyses against your notes; Python analyses outrank the agent's claims. A run without measurements is blocked.
-
-## Command line
+Start the panel:
 
 ```sh
-uv run jesse --notes                                        # list the notes Jesse reads
-uv run --env-file .env jesse "question"                     # one investigation in a hosted browser
-uv run --env-file .env jesse "question" --surface desktop   # on this Mac
-uv run --env-file .env jesse-ui --research path/to/notes    # panel with another notes folder
+./launch_local.sh
 ```
 
-Each run writes `runs/<id>/` with the brief given to H, H events, raw observations, analyses and `report.md`.
+The launcher installs dependencies, builds the UI, and opens [http://127.0.0.1:8765](http://127.0.0.1:8765). Keep the terminal running; press **Ctrl+C** to stop.
 
-## Deployment
+Enter a question, for example:
+
+> Is the period of a pendulum independent of its mass? Use PhET Pendulum Lab, keep length, gravity, release angle, and friction fixed, and repeat measurements at different masses.
+
+Watch the agent, send corrections, or select a previous action to replay it. **Back to live** returns to the current view. An inconclusive report offers an editable prompt for a new experiment. Reports and measurements stay in `runs/<id>/`.
+
+If the port is occupied, use `PORT=8766 ./launch_local.sh` and open `http://127.0.0.1:8766`.
+
+## Try desktop control with NetLogo (macOS)
+
+Install NetLogo at the path listed in [research/forest-fire.md](research/forest-fire.md), or update that note to match your installation. Grant your terminal **Screen Recording** and **Accessibility** permissions in **System Settings → Privacy & Security**, then restart the terminal.
 
 ```sh
-docker compose up --build -d   # http://localhost:8080
+./launch_local.sh desktop
 ```
 
-Containers read `.env` at runtime only and run web surfaces only; desktop control and microphone capture need the local launcher. Set `JESSE_ALLOWED_HOSTS` and `JESSE_PUBLIC_URL` behind a reverse proxy.
+In the panel, enter:
 
-Every push to `main` publishes `sha-<commit>` images to GHCR, then bumps `helm/jesse/values.yaml` in the cluster repository. ArgoCD deploys the change to `jesse.adrienpelfresne.com`. The bump needs the `DIRDR_CI_APP_ID` and `DIRDR_CI_APP_PEM` repository secrets.
+> Use NetLogo desktop's Fire model. Compare 55% and 70% tree density, run two fresh forests at each density, and report the percent burned, mean, and range.
 
-## Further reading
+H controls your mouse and keyboard. Keep your hands off the controls during the run; press **Esc twice** to stop H. To keep the browser-mode panel running too, launch desktop mode with `PORT=8766 ./launch_local.sh desktop`.
 
-[AGENT.md](AGENT.md) holds the architecture, decisions and milestone status.
+## Optional
+
+- **Voice input:** set `GLADIA_API_KEY` and allow microphone access.
+- **Spoken replies:** set `OPENAI_KEY`; the default Pinkman persona also needs `FISH_API_KEY`. Select **Lab colleague** to use OpenAI speech.
+- **Your own experiments:** copy [research/_template.md](research/_template.md) to a new Markdown file in `research/` and describe your tools, controls, and required results. Jesse reads all notes before each run.
+
+See [AGENT.md](AGENT.md) for architecture and project decisions.
