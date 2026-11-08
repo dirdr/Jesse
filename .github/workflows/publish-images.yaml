@@ -55,3 +55,30 @@ jobs:
           labels: org.opencontainers.image.revision=${{ github.sha }}
           cache-from: type=gha,scope=jesse-${{ matrix.target }}
           cache-to: type=gha,mode=max,scope=jesse-${{ matrix.target }}
+
+  deploy:
+    name: Deploy to cluster
+    needs: publish
+    runs-on: ubuntu-latest
+    steps:
+      - name: Get cluster repository token
+        id: app-token
+        uses: actions/create-github-app-token@d72941d797fd3113feb6b93fd0dec494b13a2547 # v1
+        with:
+          app-id: ${{ secrets.DIRDR_CI_APP_ID }}
+          private-key: ${{ secrets.DIRDR_CI_APP_PEM }}
+          owner: dirdr
+          repositories: adrien_kubernetes_cluster
+      - name: Bump image tags
+        env:
+          GH_TOKEN: ${{ steps.app-token.outputs.token }}
+          APP_ID: ${{ secrets.DIRDR_CI_APP_ID }}
+        run: |
+          git clone --depth 1 "https://x-access-token:${GH_TOKEN}@github.com/dirdr/adrien_kubernetes_cluster.git" cluster
+          cd cluster
+          sed -i "s|tag: sha-.*|tag: sha-${GITHUB_SHA}|" helm/jesse/values.yaml
+          git config user.name "dirdr-ci[bot]"
+          git config user.email "${APP_ID}+dirdr-ci[bot]@users.noreply.github.com"
+          git diff --quiet && exit 0
+          git commit -am "chore(jesse): bump to sha-${GITHUB_SHA::7}"
+          git push

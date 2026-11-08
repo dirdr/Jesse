@@ -58,7 +58,7 @@ Open http://localhost:8080. The frontend serves the React assets and proxies the
 
 The image excludes `.env`, local runs and credentials. Containers use `.env` only at runtime. Native NetLogo desktop control stays in the local launcher. The current microphone implementation captures on the backend machine; browser microphone capture is a separate integration, so use text input in the containers.
 
-The `Publish images` GitHub Actions workflow publishes both amd64 images to GHCR with immutable `sha-<full commit>` tags, using GitHub's built-in token. Pin both tags together in the cluster chart when deploying an update.
+The `Publish images` GitHub Actions workflow publishes both amd64 images to GHCR with immutable `sha-<full commit>` tags, using GitHub's built-in token. Its `deploy` job then sets both tags in `helm/jesse/values.yaml` of the cluster repository through the `dirdr-ci` GitHub App (`DIRDR_CI_APP_ID` and `DIRDR_CI_APP_PEM` secrets), and ArgoCD rolls the update out.
 
 For a reverse proxy, configure `JESSE_ALLOWED_HOSTS` with the public hostname and `JESSE_PUBLIC_URL` with its HTTPS origin. The default local launcher still binds to loopback. `/healthz` provides the container health check.
 
