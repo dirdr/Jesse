@@ -2,6 +2,12 @@
 
 Jesse runs experiments in scientific software through an H computer-use agent, records measurements, and produces a report. Research notes in [research/](research/) tell it which tools to use and how to report results.
 
+## Architecture
+
+![Jesse architecture](docs/assets/architecture.png)
+
+[Edit the diagram in Excalidraw](docs/architecture.excalidraw).
+
 ## Run locally
 
 Install [uv](https://docs.astral.sh/uv/getting-started/installation/), [Node.js](https://nodejs.org/) 22 or newer, and [pnpm](https://pnpm.io/installation) 10.26 or newer. uv installs Python 3.13 automatically.
