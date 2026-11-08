@@ -62,13 +62,7 @@ The `Publish images` GitHub Actions workflow publishes both amd64 images to GHCR
 
 For a reverse proxy, configure `JESSE_ALLOWED_HOSTS` with the public hostname and `JESSE_PUBLIC_URL` with its HTTPS origin. The default local launcher still binds to loopback. `/healthz` provides the container health check.
 
-Kubernetes deployment files live in the cluster repository under `helm/jesse` and `apps/jesse.yaml`. The `jesse` namespace contains separate frontend and backend Deployments, a persistent run volume, the `jesse-env` Secret imported from the current `.env`, and a Traefik ingress for `jesse.adrienpelfresne.com`. Login credentials are stored in Secret `jesse-auth`; retrieve the password with:
-
-```sh
-kubectl -n jesse get secret jesse-auth -o jsonpath='{.data.password}' | base64 --decode
-```
-
-The login username is `adrien`. The ingress protects the full app, including API calls that can start paid H sessions. Secret values are managed with kubectl and kept out of Git.
+Kubernetes deployment files live in the cluster repository under `helm/jesse` and `apps/jesse.yaml`. The `jesse` namespace contains separate frontend and backend Deployments, a persistent run volume, the `jesse-env` Secret imported from the current `.env`, and a Traefik ingress for `jesse.adrienpelfresne.com`. ArgoCD manages the deployment with automatic sync and self-healing. The user requested public access without a login. Secret values are managed with kubectl and kept out of Git.
 
 ## Past investigations
 
