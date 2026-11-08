@@ -3,6 +3,8 @@ from importlib.resources import files
 import json
 import multiprocessing
 from pathlib import Path
+import queue
+import threading
 import time
 
 from jesse.contexts import ResearchContext, load_extension
@@ -12,6 +14,46 @@ from .lab import Lab
 from .tools import builtin_tools
 
 MODEL = "holo4-27b"
+# H can freeze mid-run (seen: no event for 100 min, then an internal error). While H is meant to be working,
+# this much silence ends the run instead of waiting out the whole budget.
+STALL_SECONDS = 60
+
+
+class AgentStalled(Exception):
+    pass
+
+
+def _pump(stream, events: "queue.Queue[tuple[str, object]]") -> None:
+    """Read H events on a side thread so the controller can notice when they stop coming."""
+    try:
+        for event in stream:
+            events.put(("event", event))
+        events.put(("end", None))
+    except BaseException as error:  # Forwarded to the controller thread, which decides.
+        events.put(("error", error))
+
+
+def watch(stream, stall_seconds: float):
+    """Yield H events; raise AgentStalled after `stall_seconds` without one while H is working (not idle)."""
+    events: queue.Queue[tuple[str, object]] = queue.Queue()
+    threading.Thread(target=_pump, args=(stream, events), name="h-events", daemon=True).start()
+    last, idle = time.monotonic(), False
+    while True:
+        try:
+            kind, item = events.get(timeout=min(5.0, stall_seconds / 2))
+        except queue.Empty:
+            if not idle and time.monotonic() - last > stall_seconds:
+                raise AgentStalled(f"No H event for {stall_seconds:g} s") from None
+            continue
+        if kind == "end":
+            return
+        if kind == "error":
+            raise item
+        last = time.monotonic()
+        payload = json_value(item)
+        if payload.get("type") == "ActiveStateChangeEvent":
+            idle = (payload.get("data") or {}).get("state") == "idle"
+        yield payload
 
 
 def build_prompt(context: ResearchContext, surface: str, question: str) -> str:
@@ -40,7 +82,7 @@ def context_tools(lab: Lab) -> list:
 
 
 def execute(folder: Path, context: ResearchContext, surface: str, budget_seconds: int,
-            question: str = "", interactive: bool = False, client=None) -> None:
+            question: str = "", interactive: bool = False, client=None, stall_seconds: float = STALL_SECONDS) -> None:
     from hai_agents import Client
 
     lab = Lab(folder, context, question, load_extension(context))
@@ -58,9 +100,9 @@ def execute(folder: Path, context: ResearchContext, surface: str, budget_seconds
         save_json(folder, "session.json", {"id": handle.id, "agent_view_url": metadata.agent_view_url})
         print(f"Agent View: {metadata.agent_view_url}", flush=True)
         conversation_event(folder, "session", "Laboratory opening.", speak=True)
-        for event in handle.stream(timeout_seconds=max(1, budget_seconds - (time.monotonic() - started)), wait_for_seconds=5,
-                                   until="terminal" if interactive else "settled"):
-            payload = json_value(event)
+        stream = handle.stream(timeout_seconds=max(1, budget_seconds - (time.monotonic() - started)), wait_for_seconds=5,
+                               until="terminal" if interactive else "settled")
+        for payload in watch(stream, stall_seconds):
             with (folder / "events.jsonl").open("a", encoding="utf-8") as stream:
                 stream.write(json.dumps(payload, allow_nan=False) + "\n")
             data = payload.get("data") or {}
@@ -75,6 +117,10 @@ def execute(folder: Path, context: ResearchContext, surface: str, budget_seconds
         save_json(folder, "session.json", {**json_value(result), "id": handle.id, "agent_view_url": metadata.agent_view_url})
         (folder / "agent-report.md").write_text(str(result.answer or "No final agent answer."), encoding="utf-8")
         lab.finish("Session finished. Review measurements, repeats and the replay before accepting a conclusion.")
+    except AgentStalled as error:
+        save_json(folder, "stall.json", {"reason": str(error), "stall_seconds": stall_seconds})
+        conversation_event(folder, "blocker", "The lab agent stopped responding. I closed the session and kept the measurements.", speak=True)
+        lab.finish(f"H stopped responding ({error}); the session was closed and earlier evidence is retained.")
     except (KeyboardInterrupt, TimeoutError) as error:
         lab.finish("The run was stopped or reached its time budget; earlier evidence is retained.")
         if isinstance(error, KeyboardInterrupt):

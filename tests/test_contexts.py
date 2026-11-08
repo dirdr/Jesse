@@ -3,6 +3,8 @@ from dataclasses import dataclass
 import json
 from pathlib import Path
 import tempfile
+import threading
+import time
 from types import SimpleNamespace
 import unittest
 
@@ -144,10 +146,12 @@ class SyntheticResult:
 class FakeHandle:
     id = "test-session"
 
-    def __init__(self, folder, fail=False):
+    def __init__(self, folder, fail=False, freeze=None):
         self.folder = folder
         self.fail = fail
+        self.freeze = freeze  # None, or the agent state H reports before going silent
         self.cancelled = False
+        self.released = threading.Event()
 
     def get(self):
         return SimpleNamespace(agent_view_url="https://example.test/view")
@@ -160,12 +164,16 @@ class FakeHandle:
                                          raw_reading="synthetic fixture", evidence=["event:1"])
         if self.fail:
             raise RuntimeError("Synthetic connection failure")
+        if self.freeze:
+            yield {"type": "ActiveStateChangeEvent", "data": {"state": self.freeze}}
+            self.released.wait(1.0)  # H goes silent; the stall watchdog must not wait this out
 
     def wait_for_completion(self, **kwargs):
         return SyntheticResult()
 
     def cancel(self):
         self.cancelled = True
+        self.released.set()
 
 
 class FakeClient:
@@ -182,15 +190,15 @@ class FakeClient:
 
 
 class RunnerTests(unittest.TestCase):
-    def run_session(self, surface="web", fail=False):
+    def run_session(self, surface="web", fail=False, freeze=None, stall_seconds=60):
         directory = tempfile.TemporaryDirectory()
         self.addCleanup(directory.cleanup)
         folder = Path(directory.name)
         context = synthetic_context()
         (folder / "protocol.md").write_text(build_prompt(context, surface, "Q?"), encoding="utf-8")
-        handle = FakeHandle(folder, fail)
+        handle = FakeHandle(folder, fail, freeze)
         client = FakeClient(handle)
-        execute(folder, context, surface, 120, "Q?", client=client)
+        execute(folder, context, surface, 120, "Q?", client=client, stall_seconds=stall_seconds)
         return folder, client, handle
 
     def test_session_streams_records_and_reports(self):
@@ -205,6 +213,22 @@ class RunnerTests(unittest.TestCase):
     def test_desktop_surface_uses_the_local_bridge(self):
         _, client, _ = self.run_session("desktop")
         self.assertEqual(client.params["agent"]["environments"][0], {"id": "synthetic-lab-desktop", "kind": "desktop", "host": "user_device", "shell": False})
+
+    def test_frozen_agent_is_closed_and_measurements_kept(self):
+        started = time.monotonic()
+        folder, _, handle = self.run_session(freeze="running", stall_seconds=0.2)
+        self.assertLess(time.monotonic() - started, 0.9)
+        self.assertTrue(handle.cancelled)
+        outcome = json.loads((folder / "outcome.json").read_text())
+        self.assertEqual(outcome["outcome"], "inconclusive")
+        self.assertIn("stopped responding", outcome["reason"])
+        self.assertTrue((folder / "stall.json").exists())
+        self.assertIn("t1", (folder / "report.md").read_text())
+
+    def test_idle_agent_waiting_for_the_researcher_is_not_a_stall(self):
+        folder, _, handle = self.run_session(freeze="idle", stall_seconds=0.2)
+        self.assertFalse((folder / "stall.json").exists())
+        self.assertNotIn("stopped responding", json.loads((folder / "outcome.json").read_text())["reason"])
 
     def test_stream_failure_cancels_and_retains_prior_evidence(self):
         folder, _, handle = self.run_session(fail=True)
