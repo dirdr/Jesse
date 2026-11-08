@@ -118,6 +118,7 @@ export interface VoiceTurn {
 }
 
 export interface VoiceState {
+  pending?: boolean
   available: boolean
   reason: string | null
   listening: boolean
@@ -173,4 +174,7 @@ export const api = {
   voice: () => request<VoiceState>("/api/voice"),
   voiceStart: () => request<VoiceState>("/api/voice/start", { method: "POST" }),
   voiceStop: () => request<VoiceState>("/api/voice/stop", { method: "POST" }),
+  browserVoice: () => request<{ available: boolean; reason: string | null }>("/api/voice/browser"),
+  voiceSession: () => request<{ url: string }>("/api/voice/session", { method: "POST" }),
+  voiceTurn: (text: string) => request<VoiceTurn>("/api/voice/turn", { method: "POST", body: JSON.stringify({ text }) }),
 }

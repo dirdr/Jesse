@@ -7,7 +7,7 @@ import { cn } from "@/lib/utils"
 
 export function VoiceButton({ state, onToggle, className }: { state: VoiceState | null; onToggle: () => void; className?: string }) {
   const listening = Boolean(state?.listening)
-  const label = !state?.available ? state?.reason ?? "Microphone unavailable" : listening ? "Stop listening" : "Speak to Jesse"
+  const label = !state?.available ? state?.reason ?? "Microphone unavailable" : state.pending ? "Preparing voice input…" : listening ? "Stop listening" : "Speak to Jesse"
   return (
     <Tooltip>
       <TooltipTrigger asChild>
@@ -17,7 +17,7 @@ export function VoiceButton({ state, onToggle, className }: { state: VoiceState 
             variant={listening ? "destructive" : "outline"}
             size="icon"
             onClick={onToggle}
-            disabled={!state?.available}
+            disabled={!state?.available || state.pending}
             aria-pressed={listening}
             aria-label={label}
             className="relative"

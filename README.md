@@ -23,6 +23,7 @@ Set these keys in `.env`:
 - `HAI_API_KEY`: required to run the H agent.
 - `OPENAI_KEY`: enables the report's evidence-based verdict and writes spoken updates. Without it, results cannot receive a supported conclusion.
 - `FISH_API_KEY`: enables Jesse Pinkman's voice through Fish Audio; requires `OPENAI_KEY` too. Optional for text-only use.
+- `GLADIA_API_KEY`: enables microphone transcription. The panel captures your browser's microphone over HTTPS or localhost; allow microphone access when prompted. The deployed backend does not need an audio device.
 
 Start the panel:
 

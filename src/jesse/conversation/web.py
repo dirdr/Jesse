@@ -18,6 +18,7 @@ from .application import RunManager
 from .live import cached_frame, live_state
 from .speech import cached_action_speech, cached_speech, cached_step_speech, speech_available
 from .voice import VoiceListener, voice_unavailable
+from .browser_voice import browser_voice_unavailable, create_browser_session
 
 
 class ResearchQuestion(BaseModel):
@@ -215,6 +216,27 @@ def create_app(manager: RunManager | None = None, voice: VoiceListener | None = 
     @app.get("/api/voice")
     def voice_state():
         return voice.state()
+
+    @app.get("/api/voice/browser")
+    def browser_voice_state():
+        reason = browser_voice_unavailable()
+        return {"available": reason is None, "reason": reason}
+
+    @app.post("/api/voice/session")
+    def browser_voice_session():
+        try:
+            return create_browser_session()
+        except ValueError as error:
+            raise HTTPException(409, str(error)) from None
+        except Exception:
+            raise HTTPException(502, "Could not connect to Gladia. Try the microphone again.") from None
+
+    @app.post("/api/voice/turn")
+    def browser_voice_turn(body: ResearchQuestion):
+        text = body.text.strip()
+        if not text:
+            raise HTTPException(422, "No speech was detected.")
+        return voice.dispatch(text)
 
     @app.post("/api/voice/start")
     def voice_start():
