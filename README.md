@@ -31,6 +31,7 @@ Optional keys in `.env`: `OPENAI_KEY` for context selection and the outcome verd
 | --- | --- | --- |
 | ChemCollective coolant | `./launch_local.sh chemcollective-coolant web` | Which coolant absorbs more heat per gram? |
 | NetLogo Fire | `./launch_local.sh netlogo-fire web` or `desktop` | How does tree density change how much of a forest burns? Compare 55% and 70% and repeat both. |
+| PhET Pendulum, Planet X | `./launch_local.sh phet-pendulum web` | What is the gravity on Planet X? Measure it with the pendulum. |
 
 Run a second panel on another port with `PORT=8766 ./launch_local.sh …`.
 
@@ -44,7 +45,7 @@ Run a second panel on another port with `PORT=8766 ./launch_local.sh …`.
 - **Voice**: press the microphone. The first turn starts a run; later turns become corrections. See [live voice setup](docs/LIVE_VOICE.md).
 - **History** in the sidebar replays any past run from `runs/`.
 
-Each run ends **supported**, **inconclusive** or **blocked**. An OpenAI model judges the recorded trials and Python analyses against the context's completion criteria; a run without measurements is blocked.
+Each run ends **supported**, **inconclusive** or **blocked**. A context's `outcome(lab)` in `tools.py` decides it in Python from the recorded readings; contexts without one fall back to an OpenAI judgement. A run without measurements is blocked.
 
 ## Command line
 
@@ -70,7 +71,7 @@ uv run jesse --catalogue
 | --- | --- |
 | `context.toml` | Supported questions, surfaces (`[surfaces.web]` start URL, `[surfaces.desktop]` app path), tools, completion criteria and limits |
 | `protocol.md` | Step-by-step instructions H follows in the lab |
-| `tools.py` | Optional: `tools(lab)` returns extra Python tools for H; `report(lab)` adds a report section |
+| `tools.py` | Optional: `tools(lab)` returns extra Python tools for H; `report(lab)` adds a report section; `outcome(lab)` decides the outcome |
 
 H sees each tool's name, typed arguments and docstring, so write docstrings as instructions. `lab.record` saves each reading once, rejects conflicting retries and enforces `max_trials`. `tools.py` runs as local Python; review it like any other code.
 

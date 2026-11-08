@@ -98,7 +98,8 @@ class Lab:
         outcome = "inconclusive" if observations else "blocked"
         if observations:
             from .verdict import judge
-            verdict = (self.judge or judge)(self)
+            decide = getattr(self.extension, "outcome", None)
+            verdict = decide(self) if decide and not self.judge else (self.judge or judge)(self)
             if verdict is not None:
                 outcome, reason = verdict
                 if outcome not in {"supported_conclusion", "inconclusive"}:
