@@ -1,24 +1,24 @@
 # Jesse
 
-Status: research contexts are implemented. Each lab is a folder under `contexts/` (context.toml, protocol.md, optional tools.py) loaded at runtime; the panel can pin one with `jesse-ui --context <id>` and choose its surface with `--surface`. Shipped contexts are experimental ChemCollective coolant (web), NetLogo Fire (desktop/web) and PhET Pendulum Planet X (web, added 2026-11-08 as the visual demo candidate; its controls and period readout were checked in a headless browser, but no H interaction proof exists yet). The user approved Fire on 2026-11-07 as a new context using the generic runner. Fire interaction proofs remain pending on both surfaces; the earlier replay-verified NetLogo Enzyme Kinetics proof (run 20261107T133143442966Z) does not verify Fire. Coolant live acceptance, replay review and an analysis-driven follow-up remain open.
+Status: research notes replaced research contexts on 2026-11-08 at the user's request. The researcher writes Markdown notes under `research/` (background, usual tools, how they like results); every investigation gives all notes to one semi-autonomous H agent, which proposes a plan, may search the web, operates only the tools in the notes unless the researcher approves another, records readings and proposes the result. The fixed catalogue, context selector, per-context protocols, `tools.py` extensions and Python outcome rules were removed. Shipped notes: mechanics (PhET Pendulum, Planet X), forest fire (NetLogo Fire, web and desktop) and thermochemistry (ChemCollective coolant). No H interaction proof exists yet for the notes-driven agent; earlier context-run proofs do not carry over.
 
 Team constraints: three people, 24 hours until submission as of planning, with work expected to start in 8–10 hours. Plan around eight focused implementation hours.
 
-For team task allocation and milestone handoffs, read [the hackathon work plan](docs/HACKATHON_PLAN.md) and its proposed contracts. For each lab, maintain its context folder under `contexts/` and the [shared agent behavior](src/jesse/instructions.md); the controller loads both into H's prompt. Later gates and optional multi-provider review in the work plan remain proposals; the accepted single-agent MVP still applies. This file is the canonical decision record.
+For team task allocation and milestone handoffs, read [the hackathon work plan](docs/HACKATHON_PLAN.md) and its proposed contracts. Research areas live as notes under `research/`; the [shared agent behavior](src/jesse/instructions.md) and all notes are loaded into H's prompt. Later gates and optional multi-provider review in the work plan remain proposals; the accepted single-agent MVP still applies. This file is the canonical decision record.
 
 ## Product
 
 Jesse is an autonomous research technician for software-based experimental investigations. A research planner selects a suitable protocol and surface from an approved catalogue. An H computer-use agent executes the experiment through its interface. The target workflow analyzes measurements, investigates discrepancies and produces a traceable scientific Markdown report.
 
-An unknown experiment is an unknown sample or unanswered question within supported protocols and simulations. The agent may adapt measurements and move between supported activities. Findings describe the configured simulator and its assumptions.
+An unknown experiment is an unknown sample or unanswered question the researcher's usual tools can address. The agent chooses the tool and method from the notes, may adapt measurements, and findings describe the tools used and their assumptions.
 
 ## Demo scenarios
 
-The first context is the ChemCollective engine coolant activity (`contexts/chemcollective-coolant`). Demo prompt: “Compare this new coolant with the reference, run the experiment, verify your measurements, and explain which absorbs more heat per gram for the same temperature rise.” Record volumes, temperatures, thermal assumptions and a repeat; calculate specific heat capacity and compare it with the supplied reference. The reference is a supplied constant, not a GUI trial.
+Demo prompts, one per shipped note: “What is the gravity on Planet X? Measure it with the pendulum, and check whether mass changes the result.” (PhET Pendulum Lab, hidden g ≈ 14.2 m/s² checked in a headless browser); “How does tree density change how much of a forest burns? Compare 55% and 70% density and repeat both conditions.” (NetLogo Fire); “Compare this new coolant with the reference and explain which absorbs more heat per gram.” (ChemCollective coolant, reference 2.200 J/(g·°C)).
 
-The second context is NetLogo Fire (`contexts/netlogo-fire`). Demo prompt: “How does tree density change how much of a forest burns? Compare 55% and 70% density and repeat both conditions.” Four fresh GUI trials compare displayed percent burned with unchanged world geometry; ticks are model steps. The context supplies the operating protocol, checked descriptive analysis and repeat comparison. Both desktop and web use the existing runner. Each surface needs its own interaction proof. Four trials cannot estimate a critical density, a crossing probability or real wildfire risk.
+Four Fire runs cannot estimate a critical density or real wildfire risk; the notes say so, and the agent must not claim it.
 
-Additional labs are added as context folders. Each remains unverified until H demonstrates its required GUI interactions. Choose tools by scientific fit; do not force unrelated simulators into one experimental chain. Findings concern the simulator, not a physical laboratory validation.
+New research areas are added as Markdown notes. A tool remains unverified until H demonstrates its required GUI interactions. Findings concern the tool, not a physical laboratory validation.
 
 Sources: https://chemcollective.org/activities/info/92 ; https://chemcollective.org/vlabs ; https://ccl.northwestern.edu/netlogo/models/Fire
 
@@ -26,13 +26,13 @@ Retain five stories: Result Detective, Protocol Reproducer, Hands-Free Technicia
 
 ## Python and H responsibilities
 
-Q10 evolved with the user's question-routing requirement: retain one H computer-use operator and the lightweight Python controller, and add a replaceable catalogue-selection step before execution. The default selector uses PydanticAI with OpenAI; an explicit H tool-only selector is available through `--planner h`. These are alternative backends, not simultaneous planners. The full autonomous research-manager loop remains future work.
+Q10 was revised on 2026-11-08: keep one H computer-use operator and the lightweight Python controller, but remove catalogue selection. H reads the researcher's notes, proposes a plan with `publish_update`, waits about 20 seconds for a correction, then executes. The researcher chose: replace contexts entirely, propose-then-go autonomy, and free web search and reading while operating only tools listed in the notes unless approved.
 
-The selector returns a typed proposal; Python checks the registered protocol, actual surface availability and the researcher's explicit surface preference before launching H. The model cannot choose an arbitrary executor or expand the selected context's trial limit (coolant: two; Fire: four). The controller manages sessions, executes custom tools, validates records, persists state and enforces a shared selection/execution budget. H chooses GUI actions. H's runtime manages the observation, model, action and tool loop; the SDK executes custom tools in our application while processing the session.
+The controller manages sessions, executes custom tools, validates records, persists state and enforces the time budget (≤ 600 s), step limit (150) and trial limit (12). H chooses tools, methods and GUI actions. H's runtime manages the observation, model, action and tool loop; the SDK executes custom tools in our application while processing the session. Browsing restrictions are instructions, not an enforced access policy.
 
-Expose tools for inspecting the approved application catalogue, recording observations, running predefined analyses, and assembling reports. Supply bounded protocols and assumptions directly in the investigation context. RAG, vector search, corpus backfill and retrieval of earlier investigations are outside the product scope.
+Expose four generic tools: `publish_update`, `acknowledge_researcher_message`, `record_observation` (displayed values, units, raw text, evidence) and `analyze_readings` (linear fit of recorded values, optionally squared and through the origin, plus mean and spread). Analyses use only recorded values. RAG, vector search and retrieval of earlier investigations remain outside scope; web search happens visibly in H's browser.
 
-Operate the selected approved simulator through its browser or native desktop interface. Associate observed readings with settings, units and supporting screenshots or session events. Preserve raw measurements separately from derived results.
+Operate the chosen tool through its browser or native desktop interface. Associate observed readings with settings, units and supporting screenshots or session events. Preserve raw measurements separately from derived results.
 
 Use hosted H sessions and retain agent_view_url for live viewing and replay in H Agent View. Keep one backend executor for custom tools; additional observers remain read-only. The backend must remain running while tool execution is needed.
 
@@ -52,7 +52,7 @@ The public HoloDesktop CLI repository now installs the CLI distributed with the 
 
 ## Architecture
 
-Jesse has one Python controller, a replaceable context selector and one hosted H computer-use operator. Python owns contexts, session lifecycle, budgets, tools, validated records and artifacts; H owns GUI actions. The selector uses OpenAI through PydanticAI or a separate H tool-only planning session, or is skipped when a context is pinned. Gladia supplies voice input in the local panel. Web and desktop are alternative execution surfaces declared per context.
+Jesse has one Python controller and one hosted H computer-use operator. Python owns the notes, session lifecycle, budgets, tools, validated records and artifacts; H owns tool choice and GUI actions. Gladia supplies voice input in the local panel. The web surface starts on a search engine; the desktop surface uses the user_device bridge and is chosen at launch (`--surface desktop`).
 
 Container deployment uses separate Nginx/React frontend and Python backend images. Nginx serves static assets and proxies HTML/API calls so Python can inject its CSRF token on the same origin. The backend uses hosted web surfaces, one replica and persistent run storage. Local native desktop control and backend microphone capture stay in the local launcher; remote browser microphone capture is a separate integration. Public deployment sets explicit allowed hosts and an HTTPS public origin. The user requested access without a login on 2026-11-08. ArgoCD manages the `jesse` namespace from the cluster repository; the existing `.env` is imported into a Kubernetes Secret, never copied into an image or committed. Every image publish from `main` bumps both chart tags in the cluster repository, so ArgoCD deploys each change automatically.
 
@@ -65,10 +65,9 @@ flowchart TB
     T["Persona speech output<br/>Pinkman: Fish Audio<br/>Lab colleague: OpenAI"]
 
     subgraph LOCAL["Jesse - Python application"]
-        X["Research contexts<br/>contexts/&lt;id&gt;/"]
-        P["Context selector<br/>OpenAI or H, or pinned"]
+        X["Research notes<br/>research/*.md"]
         C["Controller<br/>Preflight, sessions, budgets and cancellation"]
-        K["Tools<br/>Built-in and tools.py"]
+        K["Tools<br/>Record, analyze, update, acknowledge"]
         F[("Investigation files<br/>runs/&lt;id&gt;/")]
         O["Markdown report<br/>Outcome, limitations and evidence links"]
         Y["Panel<br/>Live view and history"]
@@ -86,13 +85,11 @@ flowchart TB
     U -->|"Speak"| G
     G -->|"Final turn"| Y
     Y -->|"Start or steer a run"| C
-    X -->|"Questions, surfaces, limits"| P
-    P -->|"Validated context"| C
-    X -->|"Protocol and tools"| C
+    X -->|"Background and usual tools"| C
     C -->|"Start session and return tool results"| H
     H -->|"Stream events and call tools"| K
     K -->|"Validated readings"| F
-    H -->|"Operate visible controls"| W
+    H -->|"Search, read and operate tools"| W
     H -->|"Operate mouse and keyboard"| D
     C -->|"Write outcome"| O
     F -->|"Traceable evidence"| O
@@ -103,19 +100,19 @@ flowchart TB
     T -->|"Speak updates"| U
 ```
 
-Extensibility lives in context folders. A new lab on an existing surface needs only a folder; it still needs its own interaction proof before its status changes from unverified.
+Extensibility lives in `research/*.md` notes. Adding a research area needs only a note; no code.
 
-The scientific loop is plan → measure → analyze → verify or adapt → report. Outputs may be supported, inconclusive or blocked. A context may define `outcome(lab)` in tools.py to decide the outcome deterministically in Python from its recorded analyses; PhET Pendulum (`contexts/phet-pendulum`, hidden Planet X gravity, web only) does so. Otherwise the outcome is decided automatically at the end of a run (`investigating/verdict.py`): an OpenAI model judges the recorded trials, their Python analyses and the agent's report against the context's completion criteria and returns supported_conclusion or inconclusive with a reason. Python analyses outrank agent claims, a supported conclusion must cite recorded trials, runs without measurements are blocked, and replay review remains pending. A completed API turn is separate from a supported scientific conclusion.
+The scientific loop is propose → measure → analyze → verify or adapt → propose the result. Outputs may be supported, inconclusive or blocked. The outcome is decided at the end of a run (`investigating/verdict.py`): an OpenAI model judges the recorded trials, Python analyses and the agent's report against the brief (including the researcher's notes) and returns supported_conclusion or inconclusive with a reason. Python analyses outrank agent claims, a supported conclusion must cite recorded trials, runs without measurements are blocked, and replay review remains pending. The user accepted on 2026-11-08 that this outcome is not deterministic.
 
 Keep one operator and one custom-tool executor. Additional agent providers or a read-only reviewer remain optional future extensions. Agent View observes execution; it does not replace the controller or execute custom tools.
 
-## Research contexts and investigation records
+## Research notes and investigation records
 
-The catalogue is the set of folders under `contexts/` (override with `--contexts` or `JESSE_CONTEXTS_DIR`). Folders starting with `_` are skipped; `contexts/_template` is the starting point. Each `context.toml` declares supported and unsupported questions, application and activity, surfaces (`[surfaces.web]` with `start_url`, `[surfaces.desktop]` with optional `app_path`), assumptions, completion criteria, sources, interaction status, built-in tools and limits (budget ≤ 600 s, steps, trials). `protocol.md` is H's operating guide. An optional `tools.py` defines `tools(lab)` returning extra H tools and `report(lab)` returning a report section; it runs as local Python, so contexts are trusted code reviewed like any other change.
+Notes are the Markdown files under `research/` (override with `--research` or `JESSE_RESEARCH_DIR`); files starting with `_` are skipped and `research/_template.md` is the starting point. A note's title is its first `#` heading. Notes are plain text given to H; they contain no code.
 
-`jesse "question"` selects among loaded contexts and executes the chosen one; `--context <id>` skips the selector; `--catalogue` lists contexts and `--plan-only` routes without GUI execution. Python validates the selected context, surface availability and preflight before starting H. Unsupported questions and unavailable surfaces produce blocked reports. The separate voice general-browser mode does not dispatch contexts. Anthropic credentials may be configured locally, but no Anthropic adapter is implemented.
+`jesse "question"` runs one investigation with all notes; `--surface web|desktop` picks the surface and `--notes` lists the notes. Python checks preflight before starting H; an unavailable surface produces a blocked report. Anthropic credentials may be configured locally, but no Anthropic adapter is implemented.
 
-Persist investigation-local settings, raw readings, units, screenshots, analysis and conclusions as ordinary files under `runs/<id>/` with stable trial identifiers: `observations/` holds raw readings, `analyses/` holds derived values. Retried identical writes are idempotent; conflicting writes and readings beyond `max_trials` are rejected. Reports link to their evidence. The panel sidebar lists past runs for replay; later investigations do not automatically retrieve or learn from them.
+Persist the brief given to H (`protocol.md`), raw readings, units, screenshots, analyses and conclusions as ordinary files under `runs/<id>/` with stable trial identifiers: `observations/` holds raw readings, `analyses/` holds derived values. Retried identical writes are idempotent; conflicting writes and readings beyond the trial limit are rejected. Reports link to their evidence. The panel sidebar lists past runs for replay; later investigations do not automatically retrieve or learn from them.
 
 ## Autonomy and completion
 
