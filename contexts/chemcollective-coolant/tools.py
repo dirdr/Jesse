@@ -1,15 +1,13 @@
 """Calorimetry tool for the ChemCollective coolant activity.
 
 Jesse loads this file when the context runs. `tools(lab)` returns extra H tools;
-`report(lab)` adds a section to report.md; `conclude(lab)` lets Python decide the outcome.
+`report(lab)` adds a section to report.md.
 """
 import math
 
 REFERENCE_SPECIFIC_HEAT = 2.200
 COOLANT_DENSITY = 2.78
 WATER_SPECIFIC_HEAT = 4.184
-# Two checked estimates within 5 % of each other, on the same side of the reference, support a conclusion.
-AGREEMENT = 0.05
 SOURCES = ["https://chemcollective.org/activities/info/92",
            "https://chemcollective.org/assets/modules/activities/vlab/probs/freeze.doc"]
 
@@ -105,19 +103,3 @@ def report(lab) -> str:
         lines.append("- A fresh repeat is still required before comparing with confidence.")
     return "\n".join(lines)
 
-
-def conclude(lab):
-    """Supported once two checked trials agree and give the same comparison; otherwise leave the default outcome."""
-    estimates = [item for item in lab.analyses() if item.get("status") == "estimated"]
-    if len(estimates) < 2:
-        return None
-    first, second = (item["specific_heat_j_g_c"] for item in estimates[:2])
-    if abs(first - second) > AGREEMENT * max(first, second) or estimates[0]["comparison"] != estimates[1]["comparison"]:
-        return None
-    mean = (first + second) / 2
-    comparison = estimates[0]["comparison"]
-    verdict = {"higher": "absorbs more heat per gram per degree than", "lower": "absorbs less heat per gram per degree than",
-               "equal": "absorbs the same heat per gram per degree as"}[comparison]
-    return ("supported_conclusion",
-            f"Two checked trials agree (c ≈ {mean:.3f} J/(g·°C)): Compound Y {verdict} the "
-            f"{REFERENCE_SPECIFIC_HEAT:.3f} J/(g·°C) ethylene glycol reference. Simulator finding; replay review pending.")

@@ -23,8 +23,10 @@ def _read(path: Path, default=None):
 class Lab:
     """What a context's tools.py receives: the run folder plus safe record helpers."""
 
-    def __init__(self, folder: Path, context: ResearchContext, question: str = "", extension: ModuleType | None = None):
+    def __init__(self, folder: Path, context: ResearchContext, question: str = "", extension: ModuleType | None = None,
+                 judge=None):
         self.folder = folder
+        self.judge = judge  # (lab) -> (outcome, reason) | None; defaults to the automatic evidence verdict
         self.context = context
         self.question = question
         self.extension = extension
@@ -94,10 +96,9 @@ class Lab:
     def finish(self, reason: str) -> str:
         observations = self.observations()
         outcome = "inconclusive" if observations else "blocked"
-        # A context may let Python decide a supported conclusion once its own completion criteria are met.
-        conclude = getattr(self.extension, "conclude", None)
-        if observations and callable(conclude):
-            verdict = conclude(self)
+        if observations:
+            from .verdict import judge
+            verdict = (self.judge or judge)(self)
             if verdict is not None:
                 outcome, reason = verdict
                 if outcome not in {"supported_conclusion", "inconclusive"}:
