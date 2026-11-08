@@ -1,4 +1,5 @@
-import { FlaskConical, Globe, Monitor, Plus } from "lucide-react"
+import { useState } from "react"
+import { ChevronDown, FlaskConical, Globe, Monitor, Plus } from "lucide-react"
 import { Button } from "@/components/ui/button"
 import { ScrollArea } from "@/components/ui/scroll-area"
 import { Logo } from "@/components/logo"
@@ -69,6 +70,7 @@ export function SidebarContent({
   onOpen: (run: RunSummary) => void
   onNew: () => void
 }) {
+  const [showContexts, setShowContexts] = useState(false)
   const now = new Date()
   const groups: [string, RunSummary[]][] = []
   for (const run of runs) {
@@ -91,11 +93,34 @@ export function SidebarContent({
       <Button onClick={onNew} className="justify-start bg-hazard font-semibold text-hazard-foreground hover:bg-hazard/85">
         <Plus /> New investigation
       </Button>
-      <div className="flex items-center gap-2 rounded-sm px-3 py-2 text-xs text-muted-foreground ring-1 ring-sidebar-border ring-inset">
-        <FlaskConical className="size-3.5 shrink-0 text-brand" />
-        <span className="truncate" title={scope}>
-          {scope}
-        </span>
+      <div className="rounded-sm text-xs text-muted-foreground ring-1 ring-sidebar-border ring-inset">
+        <button
+          type="button"
+          onClick={() => setShowContexts((value) => !value)}
+          aria-expanded={showContexts}
+          className="flex w-full items-center gap-2 px-3 py-2 text-left hover:text-foreground"
+        >
+          <FlaskConical className="size-3.5 shrink-0 text-brand" />
+          <span className="min-w-0 flex-1 truncate" title={scope}>
+            {scope}
+          </span>
+          <ChevronDown className={cn("size-3.5 shrink-0 transition-transform", showContexts && "rotate-180")} />
+        </button>
+        {showContexts && (
+          <ul className="flex flex-col gap-1 border-t border-sidebar-border px-3 py-2">
+            {contexts.map((context) => (
+              <li key={context.experiment_id} className={cn("flex items-center gap-2", pinned && pinned !== context.experiment_id && "opacity-50")}>
+                <span className="min-w-0 flex-1 truncate text-foreground" title={`${context.title} · ${context.application}`}>
+                  {context.title}
+                </span>
+                {context.surfaces.map((surface) => {
+                  const Icon = surface === "desktop" ? Monitor : Globe
+                  return <Icon key={surface} className="size-3 shrink-0" aria-label={surface} />
+                })}
+              </li>
+            ))}
+          </ul>
+        )}
       </div>
       <ScrollArea className="min-h-0 flex-1">
         <nav aria-label="Past investigations" className="flex flex-col gap-4 pr-2">
