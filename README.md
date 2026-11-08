@@ -4,6 +4,12 @@ Jesse is a research intern that runs experiments in scientific software. You ask
 
 Findings describe the simulator and its assumptions, not a physical laboratory.
 
+## Architecture
+
+![Jesse architecture: the Python backend drives one H agent and owns every record; each arrow names its protocol](docs/assets/architecture.png)
+
+Edit [docs/architecture.excalidraw](docs/architecture.excalidraw) in Excalidraw and re-export the PNG.
+
 ## Quick start
 
 Requires [uv](https://docs.astral.sh/uv/), Node with pnpm, and an H API key.
