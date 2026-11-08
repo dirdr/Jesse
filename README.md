@@ -45,6 +45,29 @@ To use NetLogo Web instead, run `./launch_local.sh netlogo-fire web`. To keep tw
 
 If dependencies and the UI build are already present, launch directly with `uv run --env-file .env jesse-ui --context netlogo-fire --surface desktop`. Stop the current panel with Ctrl+C before reusing its port.
 
+## Docker Compose
+
+With the existing `.env` in the repository root:
+
+```sh
+docker compose up --build -d
+docker compose ps
+```
+
+Open http://localhost:8080. The frontend serves the React assets and proxies the HTML and API to the backend, which injects its CSRF token. The backend loads both research contexts and uses hosted web surfaces. Investigation files persist in the `jesse-runs` volume. Use `docker compose down` to stop the app while keeping that volume.
+
+The image excludes `.env`, local runs and credentials. Containers use `.env` only at runtime. Native NetLogo desktop control stays in the local launcher. The current microphone implementation captures on the backend machine; browser microphone capture is a separate integration, so use text input in the containers.
+
+For a reverse proxy, configure `JESSE_ALLOWED_HOSTS` with the public hostname and `JESSE_PUBLIC_URL` with its HTTPS origin. The default local launcher still binds to loopback. `/healthz` provides the container health check.
+
+Kubernetes deployment files live in the cluster repository under `helm/jesse` and `apps/jesse.yaml`. The `jesse` namespace contains separate frontend and backend Deployments, a persistent run volume, the `jesse-env` Secret imported from the current `.env`, and a Traefik ingress for `jesse.adrienpelfresne.com`. Login credentials are stored in Secret `jesse-auth`; retrieve the password with:
+
+```sh
+kubectl -n jesse get secret jesse-auth -o jsonpath='{.data.password}' | base64 --decode
+```
+
+The login username is `adrien`. The ingress protects the full app, including API calls that can start paid H sessions. Secret values are managed with kubectl and kept out of Git.
+
 ## Past investigations
 
 The left sidebar lists every investigation in `runs/`, newest first. Click one to replay its screens, measurements and report. Use `--runs <folder>` to keep a separate history, for example one per demo.

@@ -1,5 +1,6 @@
 """Serve the local Jesse panel; H Agent View opens in a separate window."""
 import argparse
+import os
 from contextlib import asynccontextmanager
 from importlib.resources import files
 from pathlib import Path
@@ -36,6 +37,9 @@ def create_app(manager: RunManager | None = None, voice: VoiceListener | None = 
     manager = manager or RunManager(Path("runs"))
     voice = voice or VoiceListener(manager, unavailable=lambda: voice_unavailable(needs_planner=manager.context is None))
     token = secrets.token_urlsafe(32)
+    allowed_hosts = {"127.0.0.1", "localhost", "::1", "testserver"}
+    allowed_hosts.update(host.strip().lower() for host in os.environ.get("JESSE_ALLOWED_HOSTS", "").split(",") if host.strip())
+    public_origin = os.environ.get("JESSE_PUBLIC_URL", "").rstrip("/")
 
     @asynccontextmanager
     async def lifespan(app):
@@ -50,18 +54,23 @@ def create_app(manager: RunManager | None = None, voice: VoiceListener | None = 
 
     @app.middleware("http")
     async def local_requests(request: Request, call_next):
-        if request.url.hostname not in {"127.0.0.1", "localhost", "::1", "testserver"}:
-            return JSONResponse({"detail": "Use the local Jesse address."}, status_code=403)
+        if request.url.hostname not in allowed_hosts:
+            return JSONResponse({"detail": "Use the configured Jesse address."}, status_code=403)
         if request.method not in {"GET", "HEAD", "OPTIONS"}:
             if request.headers.get("x-jesse-token") != token:
                 return JSONResponse({"detail": "Refresh the Jesse panel before sending a request."}, status_code=403)
             origin = request.headers.get("origin")
-            if origin and origin.rstrip("/") != str(request.base_url).rstrip("/"):
-                return JSONResponse({"detail": "Use the local Jesse panel."}, status_code=403)
+            expected_origin = public_origin or str(request.base_url).rstrip("/")
+            if origin and origin.rstrip("/") != expected_origin:
+                return JSONResponse({"detail": "Use the configured Jesse panel."}, status_code=403)
         response = await call_next(request)
         response.headers["Cache-Control"] = "no-store"
         response.headers["X-Content-Type-Options"] = "nosniff"
         return response
+
+    @app.get("/healthz")
+    def health():
+        return {"status": "ok"}
 
     @app.get("/", response_class=HTMLResponse)
     def index():
@@ -226,6 +235,7 @@ def create_app(manager: RunManager | None = None, voice: VoiceListener | None = 
 def main(argv=None):
     parser = argparse.ArgumentParser(description=__doc__)
     parser.add_argument("--port", type=int, default=8765)
+    parser.add_argument("--host", default="127.0.0.1", help="Bind address; use 0.0.0.0 behind the container frontend")
     parser.add_argument("--context", help="Run every question in this research context, without the selector")
     parser.add_argument("--surface", choices=("auto", "web", "desktop"), default="auto", help="Execution surface for new investigations")
     parser.add_argument("--contexts", type=Path, help="Folder of research contexts (default: ./contexts or JESSE_CONTEXTS_DIR)")
@@ -244,8 +254,8 @@ def main(argv=None):
     import uvicorn
     manager = RunManager(args.runs, context=args.context, contexts=args.contexts, surface=args.surface)
     scope = f"context {args.context}" if args.context else f"{len(available)} research contexts"
-    print(f"Open Jesse at http://127.0.0.1:{args.port} ({scope}). H Agent View opens from the panel.", flush=True)
-    uvicorn.run(create_app(manager), host="127.0.0.1", port=args.port, log_level="warning")
+    print(f"Open Jesse at http://{args.host}:{args.port} ({scope}). H Agent View opens from the panel.", flush=True)
+    uvicorn.run(create_app(manager), host=args.host, port=args.port, log_level="warning")
 
 
 if __name__ == "__main__":

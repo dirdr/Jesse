@@ -52,7 +52,9 @@ The public HoloDesktop CLI repository now installs the CLI distributed with the 
 
 ## Architecture
 
-Jesse has one local Python controller, a replaceable context selector and one hosted H computer-use operator. Python owns contexts, session lifecycle, budgets, tools, validated records and artifacts; H owns GUI actions. The selector uses OpenAI through PydanticAI or a separate H tool-only planning session, or is skipped when a context is pinned. Gladia supplies voice input in the panel. Web and desktop are alternative execution surfaces declared per context.
+Jesse has one Python controller, a replaceable context selector and one hosted H computer-use operator. Python owns contexts, session lifecycle, budgets, tools, validated records and artifacts; H owns GUI actions. The selector uses OpenAI through PydanticAI or a separate H tool-only planning session, or is skipped when a context is pinned. Gladia supplies voice input in the local panel. Web and desktop are alternative execution surfaces declared per context.
+
+Container deployment uses separate Nginx/React frontend and Python backend images. Nginx serves static assets and proxies HTML/API calls so Python can inject its CSRF token on the same origin. The backend uses hosted web surfaces, one replica and persistent run storage. Local native desktop control and backend microphone capture stay in the local launcher; remote browser microphone capture is a separate integration. Public deployment sets explicit allowed hosts and an HTTPS public origin and uses Traefik authentication. The cluster repository owns the `jesse` namespace manifests; the existing `.env` is imported into a Kubernetes Secret, never copied into an image or committed.
 
 Solid connections show implemented paths; dashed connections show planned capabilities.
 
@@ -62,7 +64,7 @@ flowchart TB
     G["Gladia transcription"]
     T["Persona speech output<br/>Pinkman: Fish Audio<br/>Lab colleague: OpenAI"]
 
-    subgraph LOCAL["Jesse - local Python application"]
+    subgraph LOCAL["Jesse - Python application"]
         X["Research contexts<br/>contexts/&lt;id&gt;/"]
         P["Context selector<br/>OpenAI or H, or pinned"]
         C["Controller<br/>Preflight, sessions, budgets and cancellation"]

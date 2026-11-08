@@ -1,0 +1,30 @@
+services:
+  jesse-backend:
+    image: ${JESSE_BACKEND_IMAGE:-jesse-backend:local}
+    build:
+      context: .
+      target: backend
+    env_file:
+      - .env
+    environment:
+      JESSE_ALLOWED_HOSTS: localhost,127.0.0.1,jesse-backend,jesse-frontend
+    volumes:
+      - jesse-runs:/data
+    restart: unless-stopped
+    stop_grace_period: 45s
+    init: true
+
+  jesse-frontend:
+    image: ${JESSE_FRONTEND_IMAGE:-jesse-frontend:local}
+    build:
+      context: .
+      target: frontend
+    ports:
+      - "127.0.0.1:${JESSE_PORT:-8080}:8080"
+    depends_on:
+      jesse-backend:
+        condition: service_healthy
+    restart: unless-stopped
+
+volumes:
+  jesse-runs:
