@@ -10,7 +10,8 @@ import { TooltipProvider } from "@/components/ui/tooltip"
 import { Header } from "@/components/header"
 import { Launcher } from "@/components/launcher"
 import { LiveScreen } from "@/components/live-screen"
-import { MeasurementsPanel, PlanPanel } from "@/components/side-panels"
+import { Notebook, PlanStrip } from "@/components/side-panels"
+import { notesOf } from "@/lib/kinds"
 import { SteerBar } from "@/components/steer-bar"
 import { DecisionsPanel } from "@/components/decisions-panel"
 import { usePlayback } from "@/lib/use-playback"
@@ -48,7 +49,9 @@ export default function App() {
   const playback = usePlayback(run.runId, actions, setPinned)
   const focused = playback.focus !== null ? actions[playback.focus] ?? null : null
   const cutoff = focused ? Date.parse(focused.at) : pinned !== null ? Date.parse(live?.frames[pinned]?.at ?? "") : NaN
-  const measurements = (live?.measurements ?? []).filter((row) => Number.isNaN(cutoff) || !row.at || Date.parse(row.at) <= cutoff)
+  const visibleAt = (at: string | null | undefined) => Number.isNaN(cutoff) || !at || Date.parse(at) <= cutoff
+  const measurements = (live?.measurements ?? []).filter((row) => visibleAt(row.at))
+  const notes = notesOf(snapshot?.events ?? []).filter((note) => visibleAt(note.at))
 
   useEffect(() => {
     setPinned(null)
@@ -111,7 +114,7 @@ export default function App() {
             mic={hasRun ? mic : null}
             speech={speech}
             menu={menu}
-            persona={<PersonaPicker state={personas} value={personaId} disabled={hasRun || run.busy || personas.pending} onSelect={(id) => void personas.select(id)} />}
+            persona={hasRun ? null : <PersonaPicker state={personas} value={personaId} disabled={hasRun || run.busy || personas.pending} onSelect={(id) => void personas.select(id)} />}
           />
 
           {!hasRun ? (
@@ -119,7 +122,7 @@ export default function App() {
               <Launcher busy={run.busy || personas.pending} onStart={run.start} mic={mic} />
             </main>
           ) : (
-            <main className="mx-auto grid w-full max-w-[1600px] flex-1 grid-cols-1 gap-5 px-4 py-5 sm:px-6 xl:grid-cols-[minmax(0,1fr)_400px]">
+            <main className="mx-auto grid w-full max-w-[1600px] flex-1 grid-cols-1 gap-4 px-4 py-4 sm:px-6 xl:grid-cols-[minmax(0,1fr)_420px]">
               <div className="flex min-w-0 flex-col gap-4">
                 <LiveScreen
                   key={run.runId}
@@ -136,17 +139,13 @@ export default function App() {
                   }}
                 />
                 {(snapshot?.report_available || finished) && (
-                  <div className="flex flex-wrap items-center gap-3 rounded-md border border-border bg-card px-4 py-3">
+                  <div role="status" className="flex flex-wrap items-center gap-3 rounded-md border border-border bg-card px-3 py-2">
                     {snapshot?.outcome && <OutcomeBadge outcome={snapshot.outcome.outcome} />}
-                    <span role="status" className="text-sm text-muted-foreground">
-                      {snapshot?.report_available
-                        ? snapshot.status === "report_ready" ? "Report ready · follow-ups available" : "Report available"
-                        : "The session ended without a report."}
-                    </span>
+                    {!snapshot?.report_available && <span className="text-sm text-muted-foreground">No report</span>}
                     <span className="flex-1" />
                     {snapshot?.report_available && (
-                      <button type="button" onClick={() => setReportOpen(true)} className="text-sm font-medium text-brand hover:underline">
-                        Read the report
+                      <button type="button" onClick={() => setReportOpen(true)} className="text-sm font-semibold text-brand hover:underline">
+                        Open report
                       </button>
                     )}
                   </div>
@@ -163,9 +162,9 @@ export default function App() {
                 )}
               </div>
 
-              <aside className="flex min-w-0 flex-col gap-4 xl:sticky xl:top-[4.5rem] xl:max-h-[calc(100vh-5.5rem)]">
-                <PlanPanel plan={live?.plan ?? []} />
-                <MeasurementsPanel measurements={measurements} />
+              <aside className="flex min-w-0 flex-col gap-3 xl:sticky xl:top-[4.5rem] xl:max-h-[calc(100vh-5.5rem)]">
+                <PlanStrip plan={live?.plan ?? []} />
+                <Notebook measurements={measurements} notes={notes} />
                 <DecisionsPanel
                   actions={actions}
                   events={snapshot?.events ?? []}

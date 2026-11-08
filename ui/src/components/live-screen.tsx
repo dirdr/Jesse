@@ -3,7 +3,7 @@ import { AnimatePresence, motion } from "motion/react"
 import { ChevronLeft, ChevronRight, MonitorPlay, Radio } from "lucide-react"
 import { Button } from "@/components/ui/button"
 import { Spinner } from "@/components/ui/spinner"
-import { actionStyle, describe, plain, pointOf } from "@/lib/actions"
+import { actionStyle, describe, pointOf } from "@/lib/actions"
 import { api, type Action, type Frame } from "@/lib/api"
 
 
@@ -46,31 +46,11 @@ export function LiveScreen({ runId, frames, actions, active, replay, pinned, foc
     return chosen && chosen.frame === visible ? onFrame.filter((action) => action.index <= chosen.index) : onFrame
   }, [actions, visible, focus])
   const pointer = [...frameActions].reverse().map((action) => ({ action, point: pointOf(action, frames[visible]) })).find((item) => item.point)
-  const caption = [...frameActions].reverse().find((action) => action.text)?.text
   const lastAction = frameActions.at(-1)
 
   return (
     <div className="flex min-h-0 flex-col gap-3">
       <div className="relative overflow-hidden rounded-md border-2 border-foreground/80 bg-black">
-        <div className="flex items-center justify-between gap-3 border-b border-white/10 bg-zinc-950/90 px-4 py-2 text-xs text-zinc-400">
-          <div className="flex items-center gap-2">
-            {replay ? (
-              <span className="inline-flex items-center gap-1.5 rounded-full bg-white/10 px-2 py-0.5 font-medium text-zinc-200">
-                <MonitorPlay className="size-3.5" /> Replay
-              </span>
-            ) : !following ? (
-              <span className="rounded-full bg-hazard/20 px-2 py-0.5 font-medium text-hazard">Rewound</span>
-            ) : <span>Agent screen</span>}
-          </div>
-          <div className="flex items-center gap-3 font-mono tabular-nums">
-            {frames.length > 0 && (
-              <span>
-                {shown + 1}/{frames.length}
-              </span>
-            )}
-          </div>
-        </div>
-
         <div className="relative aspect-[16/10] w-full bg-zinc-950">
           {visible >= 0 ? (
             <>
@@ -112,23 +92,37 @@ export function LiveScreen({ runId, frames, actions, active, replay, pinned, foc
             <div className="absolute inset-0 grid place-items-center">
               <div role="status" className="flex flex-col items-center gap-3 text-zinc-400">
                 {active && <Spinner className="size-10 text-hazard" />}
-                <span className="text-sm">{active ? "Opening the laboratory…" : "No screen was recorded for this run."}</span>
+                <span className="text-sm">{active ? "Opening the lab…" : "No screen recorded"}</span>
               </div>
             </div>
           )}
 
-          {(caption || lastAction) && (
-            <div className="absolute inset-x-0 bottom-0 z-20 bg-gradient-to-t from-black/90 via-black/60 to-transparent px-5 pt-10 pb-4">
-              {lastAction && (
-                <div className="mb-1 flex items-center gap-1.5 text-xs font-semibold text-hazard">
-                  {(() => {
-                    const Icon = actionStyle(lastAction.tool).icon
-                    return <Icon className="size-3.5" />
-                  })()}
-                  {describe(lastAction)}
-                </div>
-              )}
-              {caption && <p className="truncate text-sm text-white/90">{plain(caption)}</p>}
+          <div className="pointer-events-none absolute top-3 left-3 z-20 flex items-center gap-1.5 text-xs font-medium">
+            {replay && (
+              <span className="inline-flex items-center gap-1 rounded-sm bg-black/70 px-2 py-1 text-zinc-100 backdrop-blur">
+                <MonitorPlay className="size-3.5" /> Replay
+              </span>
+            )}
+            {!following && <span className="rounded-sm bg-hazard px-2 py-1 text-hazard-foreground">Rewound</span>}
+            {active && following && !replay && (
+              <span className="inline-flex items-center gap-1.5 rounded-sm bg-black/70 px-2 py-1 text-zinc-100 backdrop-blur">
+                <span className="size-1.5 animate-pulse rounded-full bg-red-500" /> Live
+              </span>
+            )}
+          </div>
+          {frames.length > 0 && (
+            <span className="pointer-events-none absolute top-3 right-3 z-20 rounded-sm bg-black/70 px-2 py-1 font-mono text-xs text-zinc-300 tabular-nums backdrop-blur">
+              {shown + 1}/{frames.length}
+            </span>
+          )}
+
+          {lastAction && (
+            <div className="absolute inset-x-0 bottom-0 z-20 flex items-center gap-2 bg-gradient-to-t from-black/85 to-transparent px-4 pt-8 pb-3 text-sm font-semibold text-hazard">
+              {(() => {
+                const Icon = actionStyle(lastAction.tool).icon
+                return <Icon className="size-4 shrink-0" />
+              })()}
+              <span className="truncate">{describe(lastAction)}</span>
             </div>
           )}
 
@@ -191,7 +185,6 @@ function Scrubber({
         }}
         className="h-1.5 flex-1 cursor-pointer accent-[var(--crystal)]"
       />
-      {/* Always rendered so the slider width never changes when the button toggles. */}
       <Button
         size="sm"
         variant="secondary"

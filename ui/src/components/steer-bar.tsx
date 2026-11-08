@@ -1,16 +1,10 @@
 import { useMemo, useRef, useState } from "react"
-import { ArrowUp, Compass, CornerDownLeft, History, X } from "lucide-react"
+import { ArrowUp, History, X } from "lucide-react"
 import { cn } from "@/lib/utils"
 import { Spinner } from "@/components/ui/spinner"
 import { describe } from "@/lib/actions"
 import { KINDS, TONE_CLASS } from "@/lib/kinds"
 import type { Action, ConversationEvent } from "@/lib/api"
-
-const SUGGESTIONS = [
-  "Repeat the last trial before concluding",
-  "Double-check the units and settings",
-  "Explain your last decision",
-]
 
 const STATUS_ORDER = ["delivered", "delivery_unknown", "acknowledged", "applied", "rejected"]
 
@@ -64,16 +58,6 @@ export function SteerBar({
         enabled ? "border-foreground/70 focus-within:border-hazard" : "border-border",
       )}
     >
-      <header className="flex items-center gap-2 border-b border-border bg-muted/40 px-3 py-2">
-        <Compass className="size-4 text-brand" />
-        <h2 className="text-sm font-semibold">Correct or redirect Jesse</h2>
-        <span className="flex-1" />
-        <span className={cn("inline-flex items-center gap-1.5 text-[11px] font-medium", enabled ? "text-success" : "text-muted-foreground")}>
-          <span className={cn("size-1.5 rounded-full", enabled ? "animate-pulse bg-success" : "bg-muted-foreground/50")} />
-          {enabled ? "Session listening" : "Opens when the lab session is live"}
-        </span>
-      </header>
-
       {recent.length > 0 && (
         <ul className="flex flex-col gap-1 border-b border-border px-3 py-2">
           {recent.map(({ event, status }) => {
@@ -96,7 +80,7 @@ export function SteerBar({
       )}
 
       <form
-        className="flex flex-col gap-2 p-3"
+        className="flex flex-col gap-2 px-3 py-2"
         onSubmit={(event) => {
           event.preventDefault()
           void send()
@@ -132,11 +116,7 @@ export function SteerBar({
             }}
             maxLength={4000}
             placeholder={
-              enabled
-                ? step
-                  ? "What should Jesse do differently from this step?"
-                  : "Tell Jesse what to check, change or repeat…"
-                : "Corrections open while the simulator session is live"
+              enabled ? (step ? "What should change from this step?" : "Correct or redirect Jesse") : "Corrections open while the lab session is live"
             }
             className="field-sizing-content max-h-40 min-h-9 min-w-0 flex-1 resize-none bg-transparent py-1.5 text-sm leading-relaxed outline-none placeholder:text-muted-foreground disabled:cursor-not-allowed"
           />
@@ -148,26 +128,6 @@ export function SteerBar({
           >
             {busy ? <Spinner /> : <ArrowUp className="size-4" />}
           </button>
-        </div>
-        <div className="flex flex-wrap items-center gap-1.5">
-          {SUGGESTIONS.map((suggestion) => (
-            <button
-              key={suggestion}
-              type="button"
-              disabled={!enabled}
-              onClick={() => {
-                setText(suggestion)
-                input.current?.focus()
-              }}
-              className="rounded-full border border-border px-2.5 py-1 text-xs text-muted-foreground transition hover:border-foreground/40 hover:text-foreground disabled:opacity-50"
-            >
-              {suggestion}
-            </button>
-          ))}
-          <span className="flex-1" />
-          <span className="hidden items-center gap-1 text-[11px] text-muted-foreground sm:inline-flex">
-            <CornerDownLeft className="size-3" /> send · Shift <CornerDownLeft className="size-3" /> new line
-          </span>
         </div>
       </form>
     </section>

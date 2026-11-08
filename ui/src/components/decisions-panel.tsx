@@ -10,7 +10,7 @@ type Item =
   | { type: "action"; at: number; action: Action; reasoning: string | null }
   | { type: "event"; at: number; event: ConversationEvent }
 
-const SHOWN_EVENTS = new Set(["finding", "follow_up", "blocker", "question", "applied", "rejected"])
+const SHOWN_EVENTS = new Set(["question"])
 
 function time(at: string | null | undefined) {
   const value = at ? Date.parse(at) : NaN
@@ -69,7 +69,7 @@ export function DecisionsPanel({
 
   return (
     <Panel
-      title="Agent decisions"
+      title="Agent actions"
       className="max-h-[560px] min-h-[260px] flex-1 xl:max-h-none"
       aside={
         <div className="flex items-center gap-1">
@@ -99,7 +99,7 @@ export function DecisionsPanel({
       }
     >
       <div ref={scroller} className="min-h-0 flex-1 overflow-y-auto px-2 py-2">
-        {items.length === 0 && <p className="px-2 py-1 text-sm text-muted-foreground">Each decision H makes in the lab appears here.</p>}
+        {items.length === 0 && <p className="px-2 py-1 text-sm text-muted-foreground">No actions yet</p>}
         <ol className="relative flex flex-col">
           {items.map((item, position) => {
             const future = cutoff !== null && item.at > cutoff

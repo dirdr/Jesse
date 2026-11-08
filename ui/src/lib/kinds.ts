@@ -18,7 +18,7 @@ import {
   Square,
   X,
 } from "lucide-react"
-import type { RunStatus } from "@/lib/api"
+import type { ConversationEvent, RunStatus } from "@/lib/api"
 
 type Tone = "brand" | "success" | "warning" | "danger" | "muted"
 
@@ -61,4 +61,10 @@ export const STATUS: Record<RunStatus | "idle", { label: string; tone: Tone; liv
   supported_conclusion: { label: "Supported conclusion", tone: "success" },
   inconclusive: { label: "Inconclusive", tone: "warning" },
   blocked: { label: "Blocked", tone: "danger" },
+}
+
+const NOTE_KINDS = new Set(["finding", "follow_up", "blocker"])
+
+export function notesOf(events: ConversationEvent[]) {
+  return events.filter((event) => event.author !== "researcher" && NOTE_KINDS.has(event.kind))
 }
