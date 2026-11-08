@@ -118,6 +118,8 @@ Persist the brief given to H (`protocol.md`), raw readings, units, screenshots, 
 
 Session activity, report availability and scientific outcome are independent. An answer writes the report immediately. The panel opens it once per live investigation and keeps it accessible while follow-ups are possible. An idle session with a report is `report_ready`; idle without a report is `waiting` (displayed as “Session idle”). Follow-ups can resume execution and revise the report within the original limits. Session closure preserves the report and its scientific outcome. Report fetch failures remain visible and retry even after closure. An answer alone never upgrades an inconclusive scientific outcome.
 
+The report panel offers an editable follow-up prompt for inconclusive outcomes, based on the original question and verdict reason. The researcher reviews it and explicitly starts a separate investigation; when necessary this ends the current session first. The previous report and measurements remain in history. The new question carries the previous run ID and evidence gap as context, not as verified measurements, and uses a fresh execution budget.
+
 Start each investigation with an evidence checklist and execution budget. Permit measurement repeats, configuration checks and adaptations within that budget.
 
 Return one of three outcomes: supported conclusion, inconclusive, or blocked. Completion requires protocol-specific observations, checked units and conditions, and a verification measurement or repeat where required.

@@ -132,6 +132,8 @@ export default function App() {
                   replay={run.replay}
                   pinned={pinned}
                   focus={playback.focus}
+                  playing={playback.playing}
+                  onLive={playback.live}
                   onPin={(index) => {
                     playback.release()
                     setPinned(index)
@@ -144,7 +146,7 @@ export default function App() {
                     <span className="flex-1" />
                     {snapshot?.report_available && (
                       <button type="button" onClick={() => setReportOpen(true)} className="text-sm font-semibold text-brand hover:underline">
-                        Open report
+                        {snapshot?.outcome?.outcome === "inconclusive" ? "Report & next experiment" : "Open report"}
                       </button>
                     )}
                   </div>
@@ -172,7 +174,8 @@ export default function App() {
                   onSelect={playback.choose}
                   onTogglePlay={playback.toggle}
                   onLive={playback.live}
-                  live={Boolean(snapshot?.active)}
+                  reviewing={pinned !== null || playback.focus !== null}
+                  live={!run.replay && !finished}
                 />
               </aside>
             </main>
@@ -181,7 +184,7 @@ export default function App() {
       </div>
       <TranscriptPill state={voice.state} />
       {personaId === "pinkman" && <TalkingJesse speaking={hasRun && !run.replay ? speech.speaking ?? line : null} />}
-      <ReportSheet open={reportOpen} onOpenChange={setReportOpen} snapshot={snapshot} report={run.report} error={run.reportError} onRetry={run.retryReport} />
+      <ReportSheet open={reportOpen} onOpenChange={setReportOpen} snapshot={snapshot} report={run.report} error={run.reportError} onRetry={run.retryReport} onFollowUp={run.startFollowUp} />
       <Toaster position="top-center" richColors />
     </TooltipProvider>
   )

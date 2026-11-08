@@ -31,6 +31,7 @@ export function DecisionsPanel({
   onTogglePlay,
   onLive,
   live,
+  reviewing,
 }: {
   actions: Action[]
   events: ConversationEvent[]
@@ -40,6 +41,7 @@ export function DecisionsPanel({
   onTogglePlay: () => void
   onLive: () => void
   live: boolean
+  reviewing: boolean
 }) {
   const items = useMemo<Item[]>(() => {
     const list: Item[] = actions.map((action, index) => {
@@ -81,23 +83,29 @@ export function DecisionsPanel({
             type="button"
             onClick={onTogglePlay}
             disabled={actions.length === 0}
-            aria-label={playing ? "Pause replay" : focus === null ? "Replay from the start" : "Resume replay"}
-            className="grid size-7 place-items-center rounded-sm text-muted-foreground transition hover:bg-muted hover:text-foreground disabled:opacity-40"
+            aria-label={playing ? "Pause replay" : "Play replay"}
+            title={playing ? "Pause replay" : "Play recorded actions"}
+            className="inline-flex h-7 items-center gap-1 rounded-sm px-2 text-xs font-medium text-muted-foreground transition hover:bg-muted hover:text-foreground disabled:opacity-40"
           >
             {playing ? <Pause className="size-3.5" /> : <Play className="size-3.5" />}
+            {playing ? "Pause replay" : "Play replay"}
           </button>
-          {focus !== null && (
+          {reviewing && (
             <button
               type="button"
               onClick={onLive}
               className="inline-flex h-7 items-center gap-1 rounded-sm px-2 text-xs font-medium text-brand transition hover:bg-brand/10"
             >
-              <Radio className="size-3.5" /> {live ? "Live" : "Latest"}
+              <Radio className="size-3.5" /> {live ? "Back to live" : "Back to latest"}
             </button>
           )}
         </div>
       }
     >
+      <div role="status" className="border-b border-border px-3 py-2 text-xs text-muted-foreground">
+        {reviewing ? (playing ? "Playing recorded actions." : "Replay paused. Select an action to inspect it.") : "Select a previous action to replay it."}
+        {reviewing && live && " The agent is still running live."}
+      </div>
       <div ref={scroller} className="min-h-0 flex-1 overflow-y-auto px-2 py-2">
         {items.length === 0 && <p className="px-2 py-1 text-sm text-muted-foreground">No actions yet</p>}
         <ol className="relative flex flex-col">
@@ -119,6 +127,7 @@ export function DecisionsPanel({
                   type="button"
                   onClick={() => onSelect(action.index)}
                   aria-current={isFocus ? "step" : undefined}
+                  title="Replay this action"
                   className={cn(
                     "group relative flex w-full items-start gap-2.5 rounded-sm py-1.5 pr-2 pl-2 text-left transition hover:bg-muted/70",
                     isFocus && "bg-hazard/12 ring-1 ring-hazard/50 hover:bg-hazard/15",
@@ -137,6 +146,7 @@ export function DecisionsPanel({
                   <span className="min-w-0 flex-1">
                     <span className="flex items-baseline gap-2">
                       <span className="min-w-0 flex-1 truncate text-[13px] font-medium">{describe(action)}</span>
+                      {isFocus && <span className="shrink-0 text-[10px] font-semibold text-hazard">Replay</span>}
                       <span className="shrink-0 font-mono text-[10px] text-muted-foreground tabular-nums">
                         {start ? elapsed(item.at - start) : `#${action.index + 1}`}
                       </span>

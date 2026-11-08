@@ -34,7 +34,6 @@ export function usePlayback(runId: string | null, actions: Action[], onFrame: (f
         const next = (focus ?? -1) + 1
         if (next >= latest.current.length) {
           setPlaying(false)
-          select(null)
         } else {
           select(next)
         }
@@ -44,7 +43,10 @@ export function usePlayback(runId: string | null, actions: Action[], onFrame: (f
     return () => window.clearTimeout(timer)
   }, [playing, focus, select])
 
-  const toggle = useCallback(() => setPlaying((value) => !value), [])
+  const toggle = useCallback(() => {
+    if (!playing && (focus === null || focus >= latest.current.length - 1)) select(0)
+    setPlaying((value) => !value)
+  }, [playing, focus, select])
 
   const release = useCallback(() => {
     setPlaying(false)

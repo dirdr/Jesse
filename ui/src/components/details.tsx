@@ -1,3 +1,4 @@
+import { FollowUp } from "@/components/follow-up"
 import ReactMarkdown from "react-markdown"
 import remarkGfm from "remark-gfm"
 import remarkMath from "remark-math"
@@ -37,6 +38,7 @@ export function ReportSheet({
   report,
   error,
   onRetry,
+  onFollowUp,
 }: {
   open: boolean
   onOpenChange: (open: boolean) => void
@@ -44,6 +46,7 @@ export function ReportSheet({
   report: string | null
   error: string | null
   onRetry: () => void
+  onFollowUp: (question: string) => Promise<boolean>
 }) {
   const selection = snapshot?.selection
   const outcome = snapshot?.outcome
@@ -76,6 +79,9 @@ export function ReportSheet({
             </div>
           )}
           {outcome?.reason && <p className="mb-5 rounded-sm bg-muted/60 p-3 text-sm text-muted-foreground">{outcome.reason}</p>}
+          {snapshot && outcome?.outcome === "inconclusive" && (
+            <FollowUp key={snapshot.run_id} snapshot={snapshot} onStart={onFollowUp} />
+          )}
           {report ? (
             <article className="report text-sm leading-relaxed">
               <ReactMarkdown

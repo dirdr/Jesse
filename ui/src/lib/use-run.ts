@@ -110,6 +110,28 @@ export function useRun() {
     [attach],
   )
 
+  const startFollowUp = useCallback(async (question: string) => {
+    if (!question.trim() || !runId) return false
+    // The user explicitly chooses to end this session when launching a follow-up.
+    if (snapshot?.active) {
+      setBusy(true)
+      try {
+        await api.stop(runId)
+        const deadline = Date.now() + 30000
+        while ((await api.snapshot(runId)).active) {
+          if (Date.now() >= deadline) throw new Error("The previous session is still closing. Try again shortly.")
+          await new Promise((resolve) => window.setTimeout(resolve, 500))
+        }
+      } catch (error) {
+        toast.error(error instanceof Error ? error.message : "Could not close the previous session")
+        return false
+      } finally {
+        setBusy(false)
+      }
+    }
+    return start(question)
+  }, [runId, snapshot?.active, start])
+
   /** Corrections from text or a voice adapter (source "voice") reach the live H session. */
   const steer = useCallback(
     async (message: string, source: "text" | "voice" = "text") => {
@@ -155,5 +177,5 @@ export function useRun() {
     setReplay(false)
   }, [])
 
-  return { runId, replay, snapshot, live, report, reportError, retryReport, busy, fresh, start, steer, stop, reset, attach }
+  return { runId, replay, snapshot, live, report, reportError, retryReport, busy, fresh, start, startFollowUp, steer, stop, reset, attach }
 }

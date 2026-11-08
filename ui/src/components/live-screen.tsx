@@ -15,13 +15,17 @@ interface LiveScreenProps {
   replay: boolean
   pinned: number | null
   focus: number | null
+  playing: boolean
+  onLive: () => void
   onPin: (index: number | null) => void
 }
 
-export function LiveScreen({ runId, frames, actions, active, replay, pinned, focus, onPin }: LiveScreenProps) {
+export function LiveScreen({ runId, frames, actions, active, replay, pinned, focus, playing, onLive, onPin }: LiveScreenProps) {
   const latest = frames.length - 1
   const shown = pinned ?? latest
-  const following = pinned === null
+  const following = pinned === null && focus === null
+  const reviewing = !following
+  const returnLabel = replay || !active ? "Back to latest" : "Back to live"
   const [loaded, setLoaded] = useState<Set<number>>(() => new Set())
 
   // Keep showing the last decoded screenshot until the next one is ready, so the view never flashes.
@@ -50,6 +54,14 @@ export function LiveScreen({ runId, frames, actions, active, replay, pinned, foc
 
   return (
     <div className="flex min-h-0 flex-col gap-3">
+      <div className="flex flex-wrap items-center justify-between gap-2 rounded-md border border-border bg-card px-3 py-2">
+        <div role="status" className="flex items-center gap-2 text-sm">
+          {reviewing || replay ? <MonitorPlay className="size-4 text-hazard" /> : <Radio className="size-4 text-brand" />}
+          <span className="font-semibold">{reviewing ? (playing ? "Playing replay" : "Replay paused") : replay ? "Recorded investigation" : active ? "Live agent view" : "Latest agent view"}</span>
+          {reviewing && active && !replay && <span className="text-xs text-muted-foreground">Agent continues live</span>}
+        </div>
+        {reviewing && <Button size="sm" variant="secondary" onClick={onLive}><Radio /> {returnLabel}</Button>}
+      </div>
       <div className="relative overflow-hidden rounded-md border-2 border-foreground/80 bg-black">
         <div className="relative aspect-[16/10] w-full bg-zinc-950">
           {visible >= 0 ? (
@@ -98,12 +110,11 @@ export function LiveScreen({ runId, frames, actions, active, replay, pinned, foc
           )}
 
           <div className="pointer-events-none absolute top-3 left-3 z-20 flex items-center gap-1.5 text-xs font-medium">
-            {replay && (
+            {(replay || reviewing) && (
               <span className="inline-flex items-center gap-1 rounded-sm bg-black/70 px-2 py-1 text-zinc-100 backdrop-blur">
                 <MonitorPlay className="size-3.5" /> Replay
               </span>
             )}
-            {!following && <span className="rounded-sm bg-hazard px-2 py-1 text-hazard-foreground">Rewound</span>}
             {active && following && !replay && (
               <span className="inline-flex items-center gap-1.5 rounded-sm bg-black/70 px-2 py-1 text-zinc-100 backdrop-blur">
                 <span className="size-1.5 animate-pulse rounded-full bg-red-500" /> Live
@@ -141,7 +152,7 @@ export function LiveScreen({ runId, frames, actions, active, replay, pinned, foc
                 type="button"
                 aria-label="Next screen"
                 disabled={shown >= latest}
-                onClick={() => onPin(shown + 1 >= latest ? null : shown + 1)}
+                onClick={() => onPin(Math.min(latest, shown + 1))}
                 className="absolute top-1/2 right-3 z-30 grid size-9 -translate-y-1/2 place-items-center rounded-full bg-black/50 text-white opacity-0 ring-1 ring-white/15 backdrop-blur transition hover:bg-black/70 focus-visible:opacity-100 disabled:hidden [div:hover>&]:opacity-100"
               >
                 <ChevronRight className="size-5" />
@@ -151,7 +162,7 @@ export function LiveScreen({ runId, frames, actions, active, replay, pinned, foc
         </div>
       </div>
 
-      {frames.length > 1 && <Scrubber frames={frames} shown={shown} following={following} onPin={onPin} />}
+      {frames.length > 1 && <Scrubber frames={frames} shown={shown} onPin={onPin} />}
     </div>
   )
 }
@@ -159,12 +170,10 @@ export function LiveScreen({ runId, frames, actions, active, replay, pinned, foc
 function Scrubber({
   frames,
   shown,
-  following,
   onPin,
 }: {
   frames: Frame[]
   shown: number
-  following: boolean
   onPin: (index: number | null) => void
 }) {
   const last = frames.length - 1
@@ -181,21 +190,11 @@ function Scrubber({
         value={Math.max(0, shown)}
         onChange={(event) => {
           const index = Number(event.target.value)
-          onPin(index >= last ? null : index)
+          onPin(index)
         }}
         className="h-1.5 flex-1 cursor-pointer accent-[var(--crystal)]"
       />
-      <Button
-        size="sm"
-        variant="secondary"
-        onClick={() => onPin(null)}
-        disabled={following}
-        aria-hidden={following}
-        tabIndex={following ? -1 : 0}
-        className={following ? "invisible shrink-0" : "shrink-0"}
-      >
-        <Radio /> Latest
-      </Button>
+      <span className="shrink-0 font-mono text-xs text-muted-foreground">{shown + 1} / {frames.length}</span>
     </div>
   )
 }
