@@ -1,11 +1,10 @@
 import { useCallback, useEffect, useState } from "react"
-import { api, type ResearchContext, type RunSummary } from "@/lib/api"
+import { api, type ResearchNote, type RunSummary } from "@/lib/api"
 
-/** Past investigations for the sidebar and the research contexts the launcher suggests. */
+/** Past investigations and the research notes Jesse reads, for the sidebar. */
 export function useHistory(refreshKey: string | null) {
   const [runs, setRuns] = useState<RunSummary[]>([])
-  const [contexts, setContexts] = useState<ResearchContext[]>([])
-  const [pinned, setPinned] = useState<string | null>(null)
+  const [notes, setNotes] = useState<ResearchNote[]>([])
 
   const refresh = useCallback(() => {
     api
@@ -16,11 +15,8 @@ export function useHistory(refreshKey: string | null) {
 
   useEffect(() => {
     api
-      .contexts()
-      .then(({ pinned, contexts }) => {
-        setPinned(pinned)
-        setContexts(contexts)
-      })
+      .research()
+      .then(({ notes }) => setNotes(notes))
       .catch(() => undefined)
   }, [])
 
@@ -30,5 +26,5 @@ export function useHistory(refreshKey: string | null) {
     return () => window.clearInterval(timer)
   }, [refresh, refreshKey])
 
-  return { runs, contexts, pinned, refresh }
+  return { runs, notes, refresh }
 }

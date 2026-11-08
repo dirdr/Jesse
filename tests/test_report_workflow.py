@@ -9,7 +9,6 @@ from jesse.conversation.application import RunManager
 from jesse.conversation.web import create_app
 from jesse.investigating.lab import Lab
 from jesse.runtime import save_json
-from context_fixtures import synthetic_context
 
 
 class Process:
@@ -26,7 +25,7 @@ class ReportWorkflowTests(unittest.TestCase):
             manager.current_id = "synthetic-run"
             manager.process = Process()
             folder = Path(directory) / manager.current_id
-            lab = Lab(folder, synthetic_context(), "Synthetic question")
+            lab = Lab(folder, "Synthetic question")
             save_json(folder, "session.json", {"id": "synthetic-session"})
             save_json(folder, "session-state.json", {"state": "running"})
             self.assertEqual(manager.snapshot(folder.name)["status"], "running")
@@ -81,10 +80,10 @@ class ReportWorkflowTests(unittest.TestCase):
             return Process()
 
         with tempfile.TemporaryDirectory() as directory:
-            manager = RunManager(Path(directory), popen=popen, context="netlogo-fire", surface="desktop")
+            manager = RunManager(Path(directory), popen=popen, research=Path(directory) / "notes", surface="desktop")
             manager.start("Synthetic fire question")
             self.assertEqual(commands[0][commands[0].index("--surface") + 1], "desktop")
-            self.assertEqual(commands[0][commands[0].index("--context") + 1], "netlogo-fire")
+            self.assertEqual(commands[0][commands[0].index("--research") + 1], str((Path(directory) / "notes").resolve()))
 
 
 if __name__ == "__main__":

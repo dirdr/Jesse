@@ -3,8 +3,7 @@ set -euo pipefail
 
 cd "$(dirname "$0")"
 
-CONTEXT="${1:-chemcollective-coolant}"
-SURFACE="${2:-auto}"
+SURFACE="${1:-web}"
 PORT="${PORT:-8765}"
 
 if [ ! -f .env ]; then
@@ -29,4 +28,4 @@ echo "Building the UI..."
 
 (sleep 2 && open "http://127.0.0.1:$PORT") >/dev/null 2>&1 &
 
-exec uv run --env-file .env jesse-ui --context "$CONTEXT" --surface "$SURFACE" --port "$PORT"
+exec uv run --env-file .env jesse-ui --surface "$SURFACE" --port "$PORT"

@@ -6,14 +6,13 @@ import unittest
 
 from jesse.investigating.lab import Lab
 from jesse.investigating.verdict import Verdict, judge
-from context_fixtures import synthetic_context
 
 
 class VerdictTests(unittest.TestCase):
     def lab(self, trials=("t1", "t2")):
         directory = tempfile.TemporaryDirectory()
         self.addCleanup(directory.cleanup)
-        lab = Lab(Path(directory.name), synthetic_context(), "Q?")
+        lab = Lab(Path(directory.name), "Q?")
         for trial in trials:
             lab.record(trial, {"x": 1}, analysis={"status": "estimated"}, fields={"x": "1 u"})
         return lab
@@ -26,7 +25,7 @@ class VerdictTests(unittest.TestCase):
         self.assertEqual(lab.finish("Session finished."), "supported_conclusion")
         saved = json.loads((lab.folder / "outcome.json").read_text())
         self.assertIn("X is higher.", saved["reason"])
-        self.assertIn("replay review pending", saved["reason"])
+        self.assertIn("Replay review pending", saved["reason"])
         self.assertEqual([trial["trial_id"] for trial in calls[0]["trials"]], ["t1", "t2"])
         self.assertTrue((lab.folder / "verdict.json").exists())
 

@@ -13,7 +13,7 @@ dependencies = [
 ]
 
 [project.scripts]
-jesse = "jesse.selecting.cli:main"
+jesse = "jesse.investigating.cli:main"
 jesse-ui = "jesse.conversation.web:main"
 
 [build-system]

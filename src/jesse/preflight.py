@@ -2,7 +2,6 @@
 from dataclasses import asdict, dataclass
 import importlib.util
 import os
-from pathlib import Path
 import sys
 
 
@@ -13,16 +12,13 @@ class Check:
     detail: str
 
 
-def check_surface(surface: str, application: Path | None = None) -> list[Check]:
+def check_surface(surface: str) -> list[Check]:
     checks = [
         Check("credentials", bool(os.environ.get("HAI_API_KEY", "").strip()), "HAI_API_KEY must be supplied through the environment; its value is never printed."),
         Check("sdk", importlib.util.find_spec("hai_agents") is not None, "Install project dependencies with uv sync."),
     ]
     if surface == "web":
         return checks
-    if application is not None:
-        path = application.expanduser()
-        checks.append(Check("application", path.exists(), str(path) if path.exists() else f"{path} not found; install it or fix app_path in context.toml."))
     if sys.platform != "darwin":
         checks.append(Check("desktop_permissions", False, "Desktop runs currently verify macOS permissions only."))
         return checks

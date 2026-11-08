@@ -6,11 +6,11 @@ import unittest
 
 from fastapi.testclient import TestClient
 
-from jesse.contexts import load_context
+from jesse.research import load_notes
 from jesse.conversation.application import RunManager
 from jesse.conversation.web import create_app
 
-REPO_CONTEXTS = Path(__file__).resolve().parents[1] / "contexts"
+REPO_NOTES = Path(__file__).resolve().parents[1] / "research"
 
 
 def write_run(root: Path, name: str, question: str, started: str, outcome: str | None = None) -> Path:
@@ -41,39 +41,28 @@ class HistoryTests(unittest.TestCase):
         with tempfile.TemporaryDirectory() as directory:
             root = Path(directory)
             write_run(root, "coolant-20261107T133401102674Z", "Coolant?", "2026-11-07T13:34:01+00:00", "inconclusive")
-            client = TestClient(create_app(RunManager(root, contexts=REPO_CONTEXTS)))
+            client = TestClient(create_app(RunManager(root, research=REPO_NOTES)))
             runs = client.get("/api/runs").json()["runs"]
             self.assertEqual(runs[0]["run_id"], "coolant-20261107T133401102674Z")
             self.assertEqual(client.get(f"/api/runs/{runs[0]['run_id']}").status_code, 200)
             self.assertEqual(client.get("/api/runs/..%2Fescape").status_code, 404)
 
-    def test_api_lists_contexts_and_respects_a_pinned_context(self):
+    def test_api_lists_research_notes_and_skips_the_template(self):
         with tempfile.TemporaryDirectory() as directory:
-            pinned = TestClient(create_app(RunManager(Path(directory), context="chemcollective-coolant", contexts=REPO_CONTEXTS))).get("/api/contexts").json()
-            self.assertEqual(pinned["pinned"], "chemcollective-coolant")
-            self.assertEqual([item["experiment_id"] for item in pinned["contexts"]], ["chemcollective-coolant"])
-            self.assertTrue(pinned["contexts"][0]["supported_questions"])
+            notes = TestClient(create_app(RunManager(Path(directory), research=REPO_NOTES))).get("/api/research").json()["notes"]
+        ids = [note["id"] for note in notes]
+        self.assertIn("mechanics", ids)
+        self.assertNotIn("_template", ids)
+        self.assertTrue(all(note["title"] for note in notes))
 
-    def test_pinned_panel_passes_the_context_to_the_worker(self):
-        commands = []
-
-        class Process:
-            def poll(self):
-                return None
-
-        def popen(command, **kwargs):
-            commands.append(command)
-            return Process()
-
+    def test_note_title_comes_from_its_heading(self):
         with tempfile.TemporaryDirectory() as directory:
-            RunManager(Path(directory), popen=popen, context="chemcollective-coolant", contexts=REPO_CONTEXTS).start("Coolant?")
-        self.assertIn("--context", commands[0])
-        self.assertEqual(commands[0][commands[0].index("--context") + 1], "chemcollective-coolant")
-        self.assertNotIn("--surface", commands[0])
-
-    def test_template_context_is_valid_once_copied(self):
-        self.assertEqual(load_context(REPO_CONTEXTS / "_template").id, "my-lab")
-
+            root = Path(directory)
+            (root / "optics.md").write_text("Intro line\n\n# Optics bench\n\n## Usual tools\n")
+            (root / "plain-notes.md").write_text("No heading here.")
+            (root / "_draft.md").write_text("# Ignored")
+            notes = load_notes(root)
+        self.assertEqual([(note.id, note.title) for note in notes], [("optics", "Optics bench"), ("plain-notes", "Plain notes")])
 
 if __name__ == "__main__":
     unittest.main()

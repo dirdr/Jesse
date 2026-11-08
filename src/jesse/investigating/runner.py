@@ -7,11 +7,11 @@ import queue
 import threading
 import time
 
-from jesse.contexts import ResearchContext, load_extension
+from jesse.research import BUDGET_SECONDS, MAX_STEPS, SEARCH_URL, Note, brief
 from jesse.personality import character
 from jesse.runtime import conversation_event, json_value, save_json, stop_worker
 from .lab import Lab
-from .tools import builtin_tools
+from .tools import agent_tools
 
 MODEL = "holo4-27b"
 # H can freeze mid-run (seen: no event for 100 min, then an internal error). While H is meant to be working,
@@ -56,44 +56,41 @@ def watch(stream, stall_seconds: float):
         yield payload
 
 
-def build_prompt(context: ResearchContext, surface: str, question: str) -> str:
-    target = context.surfaces[surface]
-    where = (f"Execution surface: hosted visual browser, starting at {target.start_url}." if surface == "web" else
-             "Execution surface: the researcher's local desktop through the local bridge."
-             + (f" The application is installed at {target.app_path}." if target.app_path else ""))
+SURFACES = ("web", "desktop")
+
+
+def environment(surface: str) -> dict:
+    if surface == "web":
+        return {"id": "jesse-browser", "kind": "web", "start_url": SEARCH_URL,
+                "mode": {"type": "visual", "width": 1280, "height": 900}}
+    return {"id": "jesse-desktop", "kind": "desktop", "host": "user_device", "shell": False}
+
+
+def build_prompt(notes: tuple[Note, ...], surface: str, question: str) -> str:
+    where = (f"You work in a hosted browser that starts on a search engine ({SEARCH_URL})." if surface == "web" else
+             "You work on the researcher's own desktop through the local bridge; open their applications there.")
     return "\n\n".join((
-        "Researcher question (context; execute the bounded protocol): " + json.dumps(question),
+        "Researcher question: " + json.dumps(question),
         where,
         character(),
         files("jesse").joinpath("instructions.md").read_text(encoding="utf-8"),
-        context.protocol,
+        "# The researcher's notes (background and usual tools)\n\n" + brief(notes),
     ))
 
 
-def context_tools(lab: Lab) -> list:
-    tools = builtin_tools(lab, lab.context.tools)
-    factory = getattr(lab.extension, "tools", None)
-    if callable(factory):
-        tools += list(factory(lab))
-    names = [tool.__name__ for tool in tools]
-    if len(names) != len(set(names)):
-        raise ValueError(f"Duplicate tool names in context {lab.context.id}: {names}")
-    return tools
-
-
-def execute(folder: Path, context: ResearchContext, surface: str, budget_seconds: int,
+def execute(folder: Path, surface: str, budget_seconds: int,
             question: str = "", interactive: bool = False, client=None, stall_seconds: float = STALL_SECONDS) -> None:
     from hai_agents import Client
 
-    lab = Lab(folder, context, question, load_extension(context))
+    lab = Lab(folder, question)
     started = time.monotonic()
     handle = None
     try:
         handle = (client or Client(timeout=30)).start_session(
-            agent={"name": f"jesse-{context.id}", "description": context.title, "model": MODEL, "reasoning_effort": "low",
-                   "environments": [context.surfaces[surface].environment(context.id)]},
+            agent={"name": "jesse", "description": "Lab assistant", "model": MODEL, "reasoning_effort": "low",
+                   "environments": [environment(surface)]},
             messages=(folder / "protocol.md").read_text(encoding="utf-8"),
-            tools=context_tools(lab), max_time_s=budget_seconds, max_steps=context.max_steps,
+            tools=agent_tools(lab), max_time_s=budget_seconds, max_steps=MAX_STEPS,
             **({"idle_timeout_s": 90} if interactive else {}))
         save_json(folder, "session.json", {"id": handle.id, "agent_view_url": None})
         metadata = handle.get()
@@ -138,16 +135,16 @@ def execute(folder: Path, context: ResearchContext, surface: str, budget_seconds
         conversation_event(folder, "finished", f"Done. Outcome: {outcome.replace('_', ' ')}. The report is ready.", speak=True)
 
 
-def run_investigation(folder: Path, context: ResearchContext, surface: str, budget_seconds: int,
+def run_investigation(folder: Path, notes: tuple[Note, ...], surface: str, budget_seconds: int,
                       question: str, interactive: bool = False) -> int:
-    if surface not in context.surfaces:
-        raise ValueError(f"Context {context.id} does not declare the {surface} surface")
-    if not 1 <= budget_seconds <= 600:
-        raise ValueError("Execution budget must be between 1 and 600 seconds")
-    lab = Lab(folder, context, question, load_extension(context))
-    (folder / "protocol.md").write_text(build_prompt(context, surface, question), encoding="utf-8")
+    if surface not in SURFACES:
+        raise ValueError(f"Unknown surface {surface}; use web or desktop")
+    if not 1 <= budget_seconds <= BUDGET_SECONDS:
+        raise ValueError(f"Execution budget must be between 1 and {BUDGET_SECONDS} seconds")
+    lab = Lab(folder, question)
+    (folder / "protocol.md").write_text(build_prompt(notes, surface, question), encoding="utf-8")
     worker = multiprocessing.get_context("spawn").Process(
-        target=execute, args=(folder, context, surface, budget_seconds, question, interactive))
+        target=execute, args=(folder, surface, budget_seconds, question, interactive))
     try:
         worker.start()
         worker.join(budget_seconds)

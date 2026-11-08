@@ -4,7 +4,7 @@ import { Button } from "@/components/ui/button"
 import { ScrollArea } from "@/components/ui/scroll-area"
 import { Logo } from "@/components/logo"
 import { cn } from "@/lib/utils"
-import type { ResearchContext, RunSummary } from "@/lib/api"
+import type { ResearchNote, RunSummary } from "@/lib/api"
 
 const OUTCOME_DOT: Record<string, string> = {
   supported_conclusion: "bg-success",
@@ -57,15 +57,13 @@ function RunItem({ run, selected, onOpen }: { run: RunSummary; selected: boolean
 
 export function SidebarContent({
   runs,
-  contexts,
-  pinned,
+  notes,
   selectedId,
   onOpen,
   onNew,
 }: {
   runs: RunSummary[]
-  contexts: ResearchContext[]
-  pinned: string | null
+  notes: ResearchNote[]
   selectedId: string | null
   onOpen: (run: RunSummary) => void
   onNew: () => void
@@ -79,9 +77,7 @@ export function SidebarContent({
     if (last && last[0] === label) last[1].push(run)
     else groups.push([label, [run]])
   }
-  const scope = pinned
-    ? contexts.find((context) => context.experiment_id === pinned)?.title ?? pinned
-    : `${contexts.length} research context${contexts.length === 1 ? "" : "s"}`
+  const scope = `${notes.length} research note${notes.length === 1 ? "" : "s"}`
 
   return (
     <div className="flex h-full min-h-0 flex-col gap-3 bg-sidebar p-3">
@@ -108,15 +104,9 @@ export function SidebarContent({
         </button>
         {showContexts && (
           <ul className="flex flex-col gap-1 border-t border-sidebar-border px-3 py-2">
-            {contexts.map((context) => (
-              <li key={context.experiment_id} className={cn("flex items-center gap-2", pinned && pinned !== context.experiment_id && "opacity-50")}>
-                <span className="min-w-0 flex-1 truncate text-foreground" title={`${context.title} · ${context.application}`}>
-                  {context.title}
-                </span>
-                {context.surfaces.map((surface) => {
-                  const Icon = surface === "desktop" ? Monitor : Globe
-                  return <Icon key={surface} className="size-3 shrink-0" aria-label={surface} />
-                })}
+            {notes.map((note) => (
+              <li key={note.id} className="truncate text-foreground" title={`research/${note.id}.md`}>
+                {note.title}
               </li>
             ))}
           </ul>

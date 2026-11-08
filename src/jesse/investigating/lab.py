@@ -1,11 +1,10 @@
-"""Investigation records shared by built-in and context tools."""
+"""Investigation records written by the agent's tools."""
 from datetime import datetime, timezone
 import json
 from pathlib import Path
 import re
-from types import ModuleType
 
-from jesse.contexts import ResearchContext
+from jesse.research import MAX_TRIALS
 from jesse.runtime import conversation_event, save_json
 
 SAFE_ID = re.compile(r"[A-Za-z0-9][A-Za-z0-9_-]{0,79}")
@@ -21,15 +20,13 @@ def _read(path: Path, default=None):
 
 
 class Lab:
-    """What a context's tools.py receives: the run folder plus safe record helpers."""
+    """The run folder plus safe record helpers used by the agent's tools."""
 
-    def __init__(self, folder: Path, context: ResearchContext, question: str = "", extension: ModuleType | None = None,
-                 judge=None):
+    def __init__(self, folder: Path, question: str = "", judge=None, max_trials: int = MAX_TRIALS):
         self.folder = folder
-        self.judge = judge  # (lab) -> (outcome, reason) | None; defaults to the automatic evidence verdict
-        self.context = context
+        self.judge = judge
         self.question = question
-        self.extension = extension
+        self.max_trials = max_trials
         folder.mkdir(parents=True, exist_ok=True)
         (folder / "observations").mkdir(exist_ok=True)
         (folder / "analyses").mkdir(exist_ok=True)
@@ -48,8 +45,8 @@ class Lab:
             if _read(path, {}).get("reading") != reading:
                 raise ValueError("Conflicting retry: preserve the original trial")
         else:
-            if len(list(path.parent.glob("*.json"))) >= self.context.max_trials:
-                raise ValueError(f"The {self.context.max_trials}-trial limit has been reached")
+            if len(list(path.parent.glob("*.json"))) >= self.max_trials:
+                raise ValueError(f"The {self.max_trials}-trial limit has been reached")
             display = {"fields": {key: str(value) for key, value in (fields or {}).items()}, "result": result, "status": status}
             save_json(path.parent, path.name, {"trial_id": trial_id, "recorded_at": datetime.now(timezone.utc).isoformat(),
                                                "reading": reading, "display": display})
@@ -63,6 +60,13 @@ class Lab:
 
     def analyses(self) -> list[dict]:
         return [_read(path, {}) for path in sorted((self.folder / "analyses").glob("*.json"))]
+
+    def save_analysis(self, analysis_id: str, analysis: dict) -> dict:
+        if not SAFE_ID.fullmatch(analysis_id):
+            raise ValueError("Use a stable safe analysis identifier")
+        payload = {"analysis_id": analysis_id, **analysis}
+        save_json(self.folder / "analyses", f"{analysis_id}.json", payload)
+        return payload
 
     def update(self, update_id: str, kind: str, text: str) -> dict:
         if kind not in UPDATE_KINDS or not 1 <= len(text.strip()) <= 1000:
@@ -98,13 +102,12 @@ class Lab:
         outcome = "inconclusive" if observations else "blocked"
         if observations:
             from .verdict import judge
-            decide = getattr(self.extension, "outcome", None)
-            verdict = decide(self) if decide and not self.judge else (self.judge or judge)(self)
+            verdict = (self.judge or judge)(self)
             if verdict is not None:
                 outcome, reason = verdict
                 if outcome not in {"supported_conclusion", "inconclusive"}:
                     raise ValueError(f"Invalid conclusion outcome: {outcome}")
-        save_json(self.folder, "outcome.json", {"outcome": outcome, "reason": reason, "context": self.context.id,
+        save_json(self.folder, "outcome.json", {"outcome": outcome, "reason": reason,
                   "recorded_trials": len(observations), "verification": "pending_replay_review"})
         temporary = self.folder / "report.md.tmp"
         temporary.write_text(self._report(outcome, reason, observations), encoding="utf-8")
@@ -112,8 +115,7 @@ class Lab:
         return outcome
 
     def _report(self, outcome: str, reason: str, observations: list[dict]) -> str:
-        context = self.context
-        lines = [f"# {context.title}", ""]
+        lines = ["# Investigation report", ""]
         if self.question:
             lines += [f"Question: {self.question}", ""]
         lines += [f"Outcome: **{outcome}**", "", reason, "", "## Measurements", ""]
@@ -125,17 +127,16 @@ class Lab:
                 lines.append(f"| {item.get('trial_id')} | {readings} | {display.get('result') or 'Not calculated'} | {display.get('status', 'recorded')} |")
         else:
             lines.append("No measurement was recorded.")
-        section = getattr(self.extension, "report", None)
-        if callable(section):
-            lines += ["", section(self).strip()]
-        if context.assumptions:
-            lines += ["", "## Assumptions", "", *[f"- {item}" for item in context.assumptions]]
+        fits = [item for item in self.analyses() if item.get("kind") == "fit"]
+        if fits:
+            lines += ["", "## Analysis", ""]
+            lines += [f"- {item['summary']} ([details](analyses/{item['analysis_id']}.json))" for item in fits]
         answer = self.folder / "agent-report.md"
         if answer.exists() and (interpretation := answer.read_text(encoding="utf-8").strip()):
             lines += ["", "## Agent interpretation", "",
                       "The following is the agent's interpretation, pending evidence and replay review.", "", interpretation]
         lines += ["", "## Verification", "",
-                  "Replay review is pending. Agent-reported readings must be checked against the session replay before a conclusion is accepted. Findings concern the configured simulator.",
+                  "Replay review is pending. Agent-reported readings must be checked against the session replay before a conclusion is accepted. Findings concern the tools used.",
                   "", "## Evidence", ""]
         for item in observations:
             trial = item.get("trial_id")
@@ -143,7 +144,7 @@ class Lab:
             if (self.folder / "analyses" / f"{trial}.json").exists():
                 link += f" · [Analysis](analyses/{trial}.json)"
             lines.append(link)
-        links = ["[Protocol](protocol.md)", *[f"[Source]({url})" for url in context.sources]]
+        links = ["[Brief given to the agent](protocol.md)"]
         session = _read(self.folder / "session.json", {})
         if session.get("agent_view_url"):
             links.append(f"[H session and replay]({session['agent_view_url']})")

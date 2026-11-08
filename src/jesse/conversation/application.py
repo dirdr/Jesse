@@ -37,19 +37,19 @@ def run_summary(folder: Path) -> dict | None:
         started = datetime.fromtimestamp((folder / "request.json" if (folder / "request.json").exists() else folder).stat().st_mtime, timezone.utc).isoformat()
     return {"run_id": folder.name, "question": request["question"], "started_at": started,
             "context": run.get("experiment") or selection.get("experiment_id") or request.get("context"),
-            "title": run.get("title"), "surface": run.get("surface") or selection.get("surface"),
+            "title": run.get("title") if run.get("experiment") else None,
+            "surface": run.get("surface") or request.get("surface") or selection.get("surface"),
             "outcome": outcome.get("outcome"), "report_available": (folder / "report.md").exists()}
 
 
 class RunManager:
     def __init__(self, root: Path, *, popen=subprocess.Popen, send_message=None,
-                 context: str | None = None, contexts: Path | None = None, surface: str = "auto"):
-        if surface not in {"auto", "web", "desktop"}:
+                 research: Path | None = None, surface: str = "web"):
+        if surface not in {"web", "desktop"}:
             raise ValueError("Unknown execution surface")
         self.root = root.resolve()
-        self.context = context
         self.surface = surface
-        self.contexts = contexts.resolve() if contexts else None
+        self.research = research.resolve() if research else None
         self.persona = get_persona().id
         self.root.mkdir(parents=True, exist_ok=True)
         self.popen = popen
@@ -77,14 +77,10 @@ class RunManager:
             conversation_event(folder, "question", question, author="researcher")
             try:
                 with (folder / "worker.log").open("w", encoding="utf-8") as log:
-                    command = [sys.executable, "-m", "jesse.selecting.cli", question,
-                               "--timeout", "600", "--interactive", "--run-dir", str(folder)]
-                    if self.context:
-                        command += ["--context", self.context]
-                    if self.contexts:
-                        command += ["--contexts", str(self.contexts)]
-                    if self.surface != "auto":
-                        command += ["--surface", self.surface]
+                    command = [sys.executable, "-m", "jesse.investigating.cli", question, "--surface", self.surface,
+                               "--interactive", "--run-dir", str(folder)]
+                    if self.research:
+                        command += ["--research", str(self.research)]
                     self.process = self.popen(command, stdout=log, stderr=log, start_new_session=True,
                                               env={**os.environ, "JESSE_PERSONA": self.persona})
             except Exception:

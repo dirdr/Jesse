@@ -32,9 +32,9 @@ ENV PATH="/app/.venv/bin:$PATH" \
     PYTHONUNBUFFERED=1 \
     PYTHONDONTWRITEBYTECODE=1 \
     HOME=/tmp \
-    JESSE_CONTEXTS_DIR=/app/contexts
+    JESSE_RESEARCH_DIR=/app/research
 COPY --from=python-build /app/.venv/ /app/.venv/
-COPY contexts/ /app/contexts/
+COPY research/ /app/research/
 USER 10001:10001
 EXPOSE 8765
 HEALTHCHECK --interval=15s --timeout=5s --start-period=20s --retries=3 \

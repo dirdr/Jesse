@@ -171,10 +171,6 @@ def main(argv: list[str] | None = None) -> int:
     )
     modes = parser.add_mutually_exclusive_group()
     modes.add_argument(
-        "--plan", action="store_true",
-        help="route each completed turn through the Pydantic AI planner without starting H",
-    )
-    modes.add_argument(
         "--prepare", action="store_true",
         help="enrich each completed turn for an H prompt preview without starting H",
     )
@@ -182,11 +178,7 @@ def main(argv: list[str] | None = None) -> int:
         "--run", action="store_true",
         help="enrich completed turns and send them to one interactive H browser session",
     )
-    parser.add_argument(
-        "--surface", choices=("auto", "web", "desktop"), default="auto",
-        help="surface preference for voice planning (default: auto)",
-    )
-    parser.add_argument("--planner-model", help="OpenAI model for voice planning")
+    parser.add_argument("--planner-model", help="OpenAI model for preparing voice turns")
     parser.add_argument("--list-inputs", action="store_true", help="list microphone devices and exit")
     parser.add_argument("--input-device", type=int, metavar="INDEX", help="microphone device index")
     args = parser.parse_args(argv)
@@ -197,7 +189,7 @@ def main(argv: list[str] | None = None) -> int:
     if not args.list_inputs and not os.environ.get("GLADIA_API_KEY", "").strip():
         print("Blocked: set GLADIA_API_KEY in the environment.", file=sys.stderr)
         return 1
-    if not args.list_inputs and (args.plan or args.prepare or args.run) and not any(
+    if not args.list_inputs and (args.prepare or args.run) and not any(
         os.environ.get(name, "").strip() for name in ("OPENAI_API_KEY", "OPENAI_KEY")
     ):
         print("Blocked: set OPENAI_API_KEY or OPENAI_KEY for voice planning.", file=sys.stderr)
@@ -223,9 +215,7 @@ def main(argv: list[str] | None = None) -> int:
             print("Ctrl+C stops listening and cancels the H session, including unfinished work.", flush=True)
         else:
             print("Audio is streamed to Gladia. No message is sent to H.", flush=True)
-        if args.plan or args.prepare or args.run:
-            from jesse.selecting.cli import main as select_question
-
+        if args.prepare or args.run:
             workflow = None
             if args.run:
                 from .workflow import VoiceWorkflow
@@ -242,12 +232,7 @@ def main(argv: list[str] | None = None) -> int:
                     model = args.planner_model or os.environ.get("OPENAI_MODEL", "gpt-5-mini")
                     result = PydanticRequestPreparer(model).prepare(transcript)
                     print_prepared_request(transcript, result)
-                    return 0
-                options = ["--plan-only", "--surface", args.surface]
-                if args.planner_model:
-                    options.extend(["--planner-model", args.planner_model])
-                options.extend(["--", transcript])
-                return select_question(options)
+                return 0
 
             planning = VoicePlanningQueue(plan, operation="H submission" if args.run else "planning")
 

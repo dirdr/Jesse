@@ -35,7 +35,7 @@ class VoicePreparationTests(unittest.TestCase):
             with patch.dict(sys.modules, {"sounddevice": sounddevice}):
                 with patch("jesse.voice.live.run_live_preview", side_effect=capture):
                     with patch("pydantic_ai.Agent.run_sync", return_value=types.SimpleNamespace(output=prepared)) as model:
-                        with patch("jesse.selecting.cli.run_investigation") as execute:
+                        with patch("jesse.investigating.cli.run_investigation") as execute:
                             with contextlib.redirect_stdout(output):
                                 self.assertEqual(main(["--prepare"]), 0)
         self.assertEqual(json.loads(model.call_args.args[0])["transcript"], question)
@@ -56,8 +56,8 @@ class VoicePreparationTests(unittest.TestCase):
                 self.assertEqual(main(["--prepare"]), 1)
         self.assertIn("OPENAI_API_KEY", output.getvalue())
 
-    def test_prepare_and_plan_are_mutually_exclusive(self):
+    def test_prepare_and_run_are_mutually_exclusive(self):
         with contextlib.redirect_stderr(io.StringIO()):
             with self.assertRaises(SystemExit) as result:
-                main(["--prepare", "--plan"])
+                main(["--prepare", "--run"])
         self.assertEqual(result.exception.code, 2)

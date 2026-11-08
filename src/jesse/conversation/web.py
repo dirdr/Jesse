@@ -12,7 +12,7 @@ from fastapi.staticfiles import StaticFiles
 from pydantic import BaseModel, Field
 from typing import Literal
 
-from jesse.contexts import ContextError, load_contexts
+from jesse.research import load_notes
 from jesse.personality import PERSONAS, get_persona, run_persona
 from .application import RunManager
 from .live import cached_frame, live_state
@@ -35,7 +35,7 @@ class PersonaSelection(BaseModel):
 
 def create_app(manager: RunManager | None = None, voice: VoiceListener | None = None) -> FastAPI:
     manager = manager or RunManager(Path("runs"))
-    voice = voice or VoiceListener(manager, unavailable=lambda: voice_unavailable(needs_planner=manager.context is None))
+    voice = voice or VoiceListener(manager, unavailable=lambda: voice_unavailable(needs_planner=False))
     token = secrets.token_urlsafe(32)
     allowed_hosts = {"127.0.0.1", "localhost", "::1", "testserver"}
     allowed_hosts.update(host.strip().lower() for host in os.environ.get("JESSE_ALLOWED_HOSTS", "").split(",") if host.strip())
@@ -76,15 +76,13 @@ def create_app(manager: RunManager | None = None, voice: VoiceListener | None = 
     def index():
         return (assets / "index.html").read_text(encoding="utf-8").replace("__JESSE_TOKEN__", token)
 
-    @app.get("/api/contexts")
-    def contexts():
+    @app.get("/api/research")
+    def research():
         try:
-            items = load_contexts(manager.contexts)
-        except ContextError as error:
+            notes = load_notes(manager.research)
+        except ValueError as error:
             raise HTTPException(500, str(error)) from None
-        if manager.context:
-            items = tuple(item for item in items if item.id == manager.context)
-        return {"pinned": manager.context, "contexts": [item.to_dict() for item in items]}
+        return {"notes": [note.to_dict() for note in notes]}
 
     @app.get("/api/runs")
     def history():
@@ -236,25 +234,20 @@ def main(argv=None):
     parser = argparse.ArgumentParser(description=__doc__)
     parser.add_argument("--port", type=int, default=8765)
     parser.add_argument("--host", default="127.0.0.1", help="Bind address; use 0.0.0.0 behind the container frontend")
-    parser.add_argument("--context", help="Run every question in this research context, without the selector")
-    parser.add_argument("--surface", choices=("auto", "web", "desktop"), default="auto", help="Execution surface for new investigations")
-    parser.add_argument("--contexts", type=Path, help="Folder of research contexts (default: ./contexts or JESSE_CONTEXTS_DIR)")
+    parser.add_argument("--surface", choices=("web", "desktop"), default="web", help="Where the agent works: hosted browser or this desktop")
+    parser.add_argument("--research", type=Path, help="Folder of research notes (default: ./research or JESSE_RESEARCH_DIR)")
     parser.add_argument("--runs", type=Path, default=Path("runs"), help="Folder for investigations and history (default: ./runs)")
     args = parser.parse_args(argv)
     if not 1024 <= args.port <= 65535:
         parser.error("Use a port between 1024 and 65535")
     try:
-        available = load_contexts(args.contexts)
-    except ContextError as error:
+        notes = load_notes(args.research)
+    except ValueError as error:
         parser.error(str(error))
-    if not available:
-        parser.error(f"No research contexts found in {args.contexts or 'contexts'}; see contexts/README.md")
-    if args.context and args.context not in {item.id for item in available}:
-        parser.error(f"Unknown research context {args.context!r}; available: {', '.join(item.id for item in available)}")
     import uvicorn
-    manager = RunManager(args.runs, context=args.context, contexts=args.contexts, surface=args.surface)
-    scope = f"context {args.context}" if args.context else f"{len(available)} research contexts"
-    print(f"Open Jesse at http://{args.host}:{args.port} ({scope}). H Agent View opens from the panel.", flush=True)
+    manager = RunManager(args.runs, research=args.research, surface=args.surface)
+    print(f"Open Jesse at http://{args.host}:{args.port} ({len(notes)} research notes, {args.surface}). "
+          "H Agent View opens from the panel.", flush=True)
     uvicorn.run(create_app(manager), host=args.host, port=args.port, log_level="warning")
 
 

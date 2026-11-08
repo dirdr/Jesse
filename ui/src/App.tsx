@@ -79,8 +79,7 @@ export default function App() {
   const sidebar = (
     <SidebarContent
       runs={history.runs}
-      contexts={history.contexts}
-      pinned={history.pinned}
+      notes={history.notes}
       selectedId={run.runId}
       onOpen={openRun}
       onNew={newRun}

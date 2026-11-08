@@ -14,7 +14,6 @@ from jesse.conversation.application import RunManager
 from jesse.conversation.web import create_app
 from jesse.personality import LAB_PARTNER, PLAIN, get_persona
 from jesse.investigating.runner import build_prompt
-from context_fixtures import synthetic_context
 
 
 EVENT = "a" * 32
@@ -79,7 +78,7 @@ class SpeechPipelineTests(unittest.TestCase):
     def test_plain_mode_reaches_operator_writer_and_openai_delivery(self):
         with mock.patch.dict("os.environ", {"OPENAI_KEY": "test", "JESSE_PERSONA": "plain"}, clear=True):
             persona = get_persona()
-            prompt = build_prompt(synthetic_context(), "web", "Compare coolant.")
+            prompt = build_prompt((), "web", "Compare coolant.")
             self.assertIn(PLAIN, prompt)
             self.assertNotIn(LAB_PARTNER, prompt)
             response = httpx.Response(200, json={"choices": [{"message": {"content": "Checking the setup."}}]},

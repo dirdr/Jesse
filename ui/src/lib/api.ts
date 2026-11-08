@@ -104,14 +104,9 @@ export interface RunSummary {
   active: boolean
 }
 
-export interface ResearchContext {
-  experiment_id: string
+export interface ResearchNote {
+  id: string
   title: string
-  application: string
-  activity: string
-  supported_questions: string[]
-  surfaces: ("web" | "desktop")[]
-  interaction_status: string
 }
 
 export interface VoiceTurn {
@@ -156,7 +151,7 @@ async function request<T>(path: string, init: RequestInit = {}): Promise<T> {
 export const api = {
   current: () => request<{ run_id: string | null }>("/api/current"),
   runs: () => request<{ runs: RunSummary[] }>("/api/runs"),
-  contexts: () => request<{ pinned: string | null; contexts: ResearchContext[] }>("/api/contexts"),
+  research: () => request<{ notes: ResearchNote[] }>("/api/research"),
   snapshot: (id: string) => request<Snapshot>(`/api/runs/${id}`),
   start: (text: string) =>
     request<{ run_id: string }>("/api/runs", { method: "POST", body: JSON.stringify({ text }) }),
