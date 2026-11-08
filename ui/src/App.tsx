@@ -1,4 +1,4 @@
-import { useEffect, useRef, useState } from "react"
+import { useEffect, useMemo, useRef, useState } from "react"
 import { PanelLeft } from "lucide-react"
 import { Button } from "@/components/ui/button"
 import { Sheet, SheetContent, SheetTitle } from "@/components/ui/sheet"
@@ -12,6 +12,8 @@ import { Launcher } from "@/components/launcher"
 import { LiveScreen } from "@/components/live-screen"
 import { MeasurementsPanel, PlanPanel } from "@/components/side-panels"
 import { SteerBar } from "@/components/steer-bar"
+import { DecisionsPanel } from "@/components/decisions-panel"
+import { usePlayback } from "@/lib/use-playback"
 import { OutcomeBadge, ReportSheet } from "@/components/details"
 import { useRun } from "@/lib/use-run"
 import { usePersonas } from "@/lib/use-personas"
@@ -42,6 +44,11 @@ export default function App() {
   const live = run.live
   const snapshot = run.snapshot
   const finished = Boolean(snapshot && !snapshot.active)
+  const actions = useMemo(() => live?.actions ?? [], [live?.actions])
+  const playback = usePlayback(run.runId, actions, setPinned)
+  const focused = playback.focus !== null ? actions[playback.focus] ?? null : null
+  const cutoff = focused ? Date.parse(focused.at) : pinned !== null ? Date.parse(live?.frames[pinned]?.at ?? "") : NaN
+  const measurements = (live?.measurements ?? []).filter((row) => Number.isNaN(cutoff) || !row.at || Date.parse(row.at) <= cutoff)
 
   useEffect(() => {
     setPinned(null)
@@ -118,11 +125,15 @@ export default function App() {
                   key={run.runId}
                   runId={run.runId!}
                   frames={live?.frames ?? []}
-                  actions={live?.actions ?? []}
+                  actions={actions}
                   active={Boolean(snapshot?.active)}
                   replay={run.replay}
                   pinned={pinned}
-                  onPin={setPinned}
+                  focus={playback.focus}
+                  onPin={(index) => {
+                    playback.release()
+                    setPinned(index)
+                  }}
                 />
                 {(snapshot?.report_available || finished) && (
                   <div className="flex flex-wrap items-center gap-3 rounded-md border border-border bg-card px-4 py-3">
@@ -140,12 +151,31 @@ export default function App() {
                     )}
                   </div>
                 )}
-                {!finished && !run.replay && <SteerBar enabled={Boolean(snapshot?.can_message)} busy={run.busy} onSend={(text) => run.steer(text)} />}
+                {!finished && !run.replay && (
+                  <SteerBar
+                    enabled={Boolean(snapshot?.can_message)}
+                    busy={run.busy}
+                    onSend={(text) => run.steer(text)}
+                    events={snapshot?.events ?? []}
+                    step={focused}
+                    onClearStep={playback.live}
+                  />
+                )}
               </div>
 
               <aside className="flex min-w-0 flex-col gap-4 xl:sticky xl:top-[4.5rem] xl:max-h-[calc(100vh-5.5rem)]">
                 <PlanPanel plan={live?.plan ?? []} />
-                <MeasurementsPanel measurements={live?.measurements ?? []} />
+                <MeasurementsPanel measurements={measurements} />
+                <DecisionsPanel
+                  actions={actions}
+                  events={snapshot?.events ?? []}
+                  focus={playback.focus}
+                  playing={playback.playing}
+                  onSelect={playback.choose}
+                  onTogglePlay={playback.toggle}
+                  onLive={playback.live}
+                  live={Boolean(snapshot?.active)}
+                />
               </aside>
             </main>
           )}

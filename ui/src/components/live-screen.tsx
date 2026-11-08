@@ -14,10 +14,11 @@ interface LiveScreenProps {
   active: boolean
   replay: boolean
   pinned: number | null
+  focus: number | null
   onPin: (index: number | null) => void
 }
 
-export function LiveScreen({ runId, frames, actions, active, replay, pinned, onPin }: LiveScreenProps) {
+export function LiveScreen({ runId, frames, actions, active, replay, pinned, focus, onPin }: LiveScreenProps) {
   const latest = frames.length - 1
   const shown = pinned ?? latest
   const following = pinned === null
@@ -39,8 +40,12 @@ export function LiveScreen({ runId, frames, actions, active, replay, pinned, onP
     image.src = api.frameUrl(runId, shown)
   }, [runId, shown, loaded])
 
-  const frameActions = useMemo(() => actions.filter((action) => action.frame === visible), [actions, visible])
-  const pointer = frameActions.map((action) => ({ action, point: pointOf(action, frames[visible]) })).find((item) => item.point)
+  const frameActions = useMemo(() => {
+    const onFrame = actions.filter((action) => action.frame === visible)
+    const chosen = focus !== null ? actions[focus] : undefined
+    return chosen && chosen.frame === visible ? onFrame.filter((action) => action.index <= chosen.index) : onFrame
+  }, [actions, visible, focus])
+  const pointer = [...frameActions].reverse().map((action) => ({ action, point: pointOf(action, frames[visible]) })).find((item) => item.point)
   const caption = [...frameActions].reverse().find((action) => action.text)?.text
   const lastAction = frameActions.at(-1)
 
@@ -54,7 +59,7 @@ export function LiveScreen({ runId, frames, actions, active, replay, pinned, onP
                 <MonitorPlay className="size-3.5" /> Replay
               </span>
             ) : !following ? (
-              <span className="rounded-full bg-white/10 px-2 py-0.5 font-medium text-zinc-300">Paused view</span>
+              <span className="rounded-full bg-hazard/20 px-2 py-0.5 font-medium text-hazard">Rewound</span>
             ) : <span>Agent screen</span>}
           </div>
           <div className="flex items-center gap-3 font-mono tabular-nums">

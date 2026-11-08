@@ -1,10 +1,6 @@
-import { useEffect, useMemo, useRef } from "react"
 import { motion } from "motion/react"
-import { FlaskConical, User } from "lucide-react"
 import { cn } from "@/lib/utils"
-import { actionStyle, describe } from "@/lib/actions"
-import { KINDS, TONE_CLASS } from "@/lib/kinds"
-import type { Action, ConversationEvent, Measurement, PlanGoal } from "@/lib/api"
+import type { Measurement, PlanGoal } from "@/lib/api"
 
 
 export function Panel({ title, aside, children, className }: { title: string; aside?: React.ReactNode; children: React.ReactNode; className?: string }) {
@@ -65,7 +61,6 @@ export function PlanPanel({ plan }: { plan: PlanGoal[] }) {
 }
 
 export function MeasurementsPanel({ measurements }: { measurements: Measurement[] }) {
-  // Constants (same value in every trial) are noise here; show only what was varied.
   const varied = new Set(
     Object.keys(measurements[0]?.fields ?? {}).filter(
       (key) => new Set(measurements.map((row) => row.fields[key])).size > 1,
@@ -103,100 +98,5 @@ export function MeasurementsPanel({ measurements }: { measurements: Measurement[
         </ul>
       )}
     </Panel>
-  )
-}
-
-type TimelineItem =
-  | { type: "action"; at: string; action: Action }
-  | { type: "event"; at: string; event: ConversationEvent }
-
-const SHOWN_EVENTS = new Set(["plan", "finding", "follow_up", "blocker", "acknowledged", "applied", "rejected", "selection", "measurement", "question"])
-
-export function ActivityPanel({
-  actions,
-  events,
-  selectedFrame,
-  onSelectFrame,
-}: {
-  actions: Action[]
-  events: ConversationEvent[]
-  selectedFrame: number | null
-  onSelectFrame: (frame: number) => void
-}) {
-  const items = useMemo<TimelineItem[]>(() => {
-    const list: TimelineItem[] = [
-      ...actions.filter((action) => action.tool !== "update_plan").map((action) => ({ type: "action" as const, at: action.at, action })),
-      ...events.filter((event) => SHOWN_EVENTS.has(event.kind)).map((event) => ({ type: "event" as const, at: event.at, event })),
-    ]
-    return list.sort((a, b) => new Date(a.at).getTime() - new Date(b.at).getTime())
-  }, [actions, events])
-
-  const scroller = useRef<HTMLDivElement>(null)
-  useEffect(() => {
-    const element = scroller.current
-    if (element) element.scrollTo({ top: element.scrollHeight, behavior: "smooth" })
-  }, [items.length])
-
-  return (
-    <Panel title="Activity" className="min-h-[260px] flex-1">
-      <div ref={scroller} className="min-h-0 flex-1 overflow-y-auto px-2 pb-2">
-        {items.length === 0 && <p className="px-2 pb-2 text-sm text-muted-foreground">Waiting for the first action…</p>}
-        <ol className="relative flex flex-col">
-          {items.map((item, index) =>
-            item.type === "action" ? (
-              <li key={`a${item.action.index}`}>
-                <button
-                  type="button"
-                  disabled={item.action.frame === null}
-                  onClick={() => item.action.frame !== null && onSelectFrame(item.action.frame)}
-                  className={cn(
-                    "group flex w-full items-start gap-2.5 rounded-sm px-2 py-1.5 text-left transition hover:bg-muted/70",
-                    selectedFrame !== null && item.action.frame === selectedFrame && "bg-brand/10",
-                  )}
-                >
-                  {(() => {
-                    const Icon = actionStyle(item.action.tool).icon
-                    return (
-                      <span className="mt-0.5 grid size-6 shrink-0 place-items-center rounded-md bg-muted text-muted-foreground group-hover:text-foreground">
-                        <Icon className="size-3.5" />
-                      </span>
-                    )
-                  })()}
-                  <span className="min-w-0 flex-1">
-                    <span className="block truncate text-[13px] font-medium">{describe(item.action)}</span>
-                  </span>
-                </button>
-              </li>
-            ) : (
-              <li key={`e${item.event.id}-${index}`} className="px-1 py-1">
-                <EventCard event={item.event} />
-              </li>
-            ),
-          )}
-        </ol>
-      </div>
-    </Panel>
-  )
-}
-
-function EventCard({ event }: { event: ConversationEvent }) {
-  const researcher = event.author === "researcher"
-  const kind = KINDS[event.kind]
-  return (
-    <div
-      className={cn(
-        "rounded-sm border px-3 py-2 text-[13px] leading-snug",
-        researcher ? "border-brand/30 bg-brand/8" : "border-border/70 bg-background/70",
-      )}
-    >
-      <div className="mb-1 flex items-center gap-1.5 text-[11px]">
-        {researcher ? <User className="size-3 text-brand" /> : <FlaskConical className="size-3 text-brand" />}
-        <span className="font-medium">{researcher ? (event.source === "voice" ? "You (voice)" : "You") : "Jesse"}</span>
-        {!researcher && kind && (
-          <span className={cn("rounded-full px-1.5 py-px text-[10px] font-medium ring-1 ring-inset", TONE_CLASS[kind.tone])}>{kind.label}</span>
-        )}
-      </div>
-      <p className="whitespace-pre-wrap">{event.text}</p>
-    </div>
   )
 }
